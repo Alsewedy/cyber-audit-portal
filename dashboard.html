@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Finance Dashboard - Acme Corp</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+      .hidden { display: none !important; }
+      .card { border: 1px solid #ccc; padding: 15px; margin-top: 20px; border-radius: 5px; }
+      button { padding: 8px 15px; margin: 5px 0; cursor: pointer; background-color: #0056b3; color: white; border: none; border-radius: 4px; }
+      button:hover { background-color: #004494; }
+      #logoutBtn { background-color: #dc3545; }
+      #logoutBtn:hover { background-color: #c82333; }
+      pre { background: #f4f4f4; padding: 10px; max-height: 250px; overflow: auto; border: 1px solid #ddd; }
+      .role-badge { background-color: #e3f2fd; color: #1976d2; padding: 4px 10px; border-radius: 12px; font-size: 14px; margin-right: 5px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+        <h1 id="welcomeMessage">Loading Dashboard...</h1>
+        <button id="logoutBtn">Logout</button>
+    </div>
+
+    <p><strong>Your Assigned Roles:</strong> <span id="roleContainer">Loading roles...</span></p>
+
+    <div id="uploadSection" class="card hidden" style="background-color: #e8f5e9; border-color: #c8e6c9;">
+        <h3 style="margin-top: 0;">Upload Financial Report</h3>
+        <p style="font-size: 14px; color: #555;">(Restricted to Accountants & Finance Managers)</p>
+        <input type="file" id="reportFile" disabled style="margin-bottom: 10px; display: block;" />
+        <button id="uploadBtn">Upload Report</button>
+    </div>
+
+    <div id="viewSection" class="card" style="background-color: #e3f2fd; border-color: #bbdefb;">
+        <h3 style="margin-top: 0;">View Financial Reports</h3>
+        <p style="font-size: 14px; color: #555;">(Accessible to all authorized finance staff and auditors)</p>
+        <button id="viewBtn">Show Approved Reports</button>
+        <button id="allBtn" class="hidden">Show All Reports</button>
+    </div>
+    
+    <div id="approveSection" class="card hidden" style="background-color: #fff3cd; border-color: #ffeeba;">
+        <h3 style="margin-top: 0;">Approve Financial Report</h3>
+        <p style="font-size: 14px; color: #555;">(Restricted to Finance Managers)</p>
+        <button id="pendingBtn" style="background-color: #ffc107; color: black;">Show Verified (Needs Approval)</button>
+        
+        <div style="margin-top: 15px;">
+            <label for="reportID"><strong>Report ID to Approve:</strong></label>
+            <input type="text" id="reportID" placeholder="e.g., REP-003" style="margin-bottom: 10px; padding: 5px; display: block; width: 200px;" />
+            <button id="approveBtn" style="background-color: #28a745;">Approve Report</button>
+        </div>
+    </div>
+
+    <h3 style="margin-top: 30px;">API Response:</h3>
+    <pre id="apiResponse" style="
+    background-color: #0f172a; 
+    color: #fbbf24; 
+    padding: 20px; 
+    border-radius: 12px; 
+    border: 1px solid #1e293b; 
+    font-family: 'Courier New', Courier, monospace; 
+    font-size: 14px; 
+    line-height: 1.6; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    overflow-x: auto;
+">Awaiting action...</pre>
+
+       <script type="importmap">
+{
+  "imports": {
+    "keycloak-js": "./node_modules/keycloak-js/lib/keycloak.js"
+  }
+}
+</script>
+
+    <script type="module">
+      import Keycloak from 'keycloak-js';
+      
+      const keycloak = new Keycloak({
+        url: 'https://localhost:8443', 
+        realm: 'secure-finance', 
+        clientId: 'finance-portal-spa'             
+      });
+      
+      
+      
+
+      try {
+        const authenticated = await keycloak.init({ 
+        onLoad: 'login-required', 
+        checkLoginIframe: false,
+        scope: 'openid profile email finance-abac-claims'
+ });
+
+        if (authenticated) {
+            document.getElementById('welcomeMessage').innerText = `Welcome, ${keycloak.idTokenParsed?.preferred_username || 'User'}`;
+            const roles = keycloak.tokenParsed?.realm_access?.roles || [];
+            
+            const roleContainer = document.getElementById('roleContainer');
+            if (roles.length > 0) {
+                roleContainer.innerHTML = roles.map(role => `<span class="role-badge">${role}</span>`).join('');
+            } else {
+                roleContainer.innerText = 'No roles assigned';
+            }
+
+            // DYNAMIC UI RENDERING
+            if (roles.includes('accountant')) {
+                document.getElementById('uploadSection').classList.remove('hidden');
+                document.getElementById('reportFile').removeAttribute('disabled');
+            }
+            if (roles.includes('finance-manager')) {
+                document.getElementById('approveSection').classList.remove('hidden');
+                document.getElementById('allBtn').classList.remove('hidden');
+            }
+        }
+      } catch (error) {
+        document.getElementById('apiResponse').innerText = 'Failed to initialize Keycloak.';
+      }
+
+      // --- Helper for fetching ---
+      function fetchAPI(endpoint, method = 'GET') {
+          document.getElementById("apiResponse").innerText = "Processing...";
+          fetch(`http://localhost:3050${endpoint}`, {
+              method: method,
+              headers: { "Authorization": "Bearer " + keycloak.token }
+          })
+          .then(async res => {
+              const data = await res.json();
+              document.getElementById("apiResponse").innerText = JSON.stringify(data, null, 2);
+
+              if (!res.ok) return;
+          })
+          .catch(err => document.getElementById("apiResponse").innerText = "Error: " + err.message);
+      }
+
+      // --- Button Event Listeners ---
+      document.getElementById('logoutBtn').addEventListener('click', () => {
+          keycloak.logout({ redirectUri: window.location.origin + '/index.html' });
+      });
+
+      document.getElementById('uploadBtn').addEventListener('click', () => {
+          const fileInput = document.getElementById('reportFile');
+          if (fileInput.files.length === 0) return alert("Please select a file.");
+
+          document.getElementById("apiResponse").innerText = "Uploading...";
+          const formData = new FormData();
+          formData.append('reportDoc', fileInput.files[0]);
+
+          fetch("http://localhost:3050/api/upload/report", {
+              method: 'POST',
+              headers: { "Authorization": "Bearer " + keycloak.token },
+              body: formData
+          })
+          .then(async res => {
+              const data = await res.json();
+              document.getElementById("apiResponse").innerText = JSON.stringify(data, null, 2);
+              fileInput.value = ""; 
+          })
+          .catch(err => document.getElementById("apiResponse").innerText = "Error: " + err.message);
+      });
+
+      // View Buttons
+      document.getElementById('viewBtn').addEventListener('click', () => fetchAPI('/api/view/report'));
+      document.getElementById('pendingBtn').addEventListener('click', () => fetchAPI('/api/pending/report'));
+      document.getElementById('allBtn').addEventListener('click', () => fetchAPI('/api/all/report'));
+
+      // Approve Button (Reads the text box and uses PATCH)
+      document.getElementById('approveBtn').addEventListener('click', () => {
+          const reportId = document.getElementById('reportID').value.trim();
+          if (!reportId) {
+              alert("Please enter a Report ID.");
+              return;
+          }
+          fetchAPI(`/api/approve/report/${reportId}`, 'PATCH');
+      });
+    </script>
+</body>
+</html>

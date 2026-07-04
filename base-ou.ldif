@@ -1,0 +1,7 @@
+dn: ou=users,dc=cyberlab,dc=local
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=cyberlab,dc=local
+objectClass: organizationalUnit
+ou: groups

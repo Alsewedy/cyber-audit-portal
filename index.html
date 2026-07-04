@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Corporate Finance Portal</title>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Acme Corp - Public Portal</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; }
+        .header { background-color: #343a40; color: white; padding: 20px; text-align: center; }
+        .container { max-width: 800px; margin: 40px auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .public-info { background-color: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 30px; border-left: 4px solid #17a2b8; }
+        .action-area { text-align: center; padding: 20px; border-top: 1px solid #dee2e6; }
+        button { padding: 12px 24px; font-size: 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #218838; }
+        pre { font-size: 14px; color: #333; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Acme Corp Enterprise Portal</h1>
+    </div>
+
+    <div class="container">
+        <h2>Welcome to Acme Corp</h2>
+        <p>This is the public-facing portal. The information below is retrieved from our public, unauthenticated API endpoint.</p>
+
+        <div class="public-info">
+            <strong>Public API Status:</strong>
+            <pre id="publicData">Loading public data...</pre>
+        </div>
+
+        <div class="action-area">
+            <h3>Internal Systems</h3>
+            <p>Employees must authenticate to view or upload sensitive financial reports through the finance dashboard.</p>
+            <button id="loginBtn">Access Secure Finance Dashboard</button>
+        </div>
+    </div>
+<script type="importmap">
+{
+  "imports": {
+    "keycloak-js": "./node_modules/keycloak-js/lib/keycloak.js"
+  }
+}
+</script>
+
+<script type="module">
+        import Keycloak from 'keycloak-js';
+
+        // 1. Fetch Public Data Immediately (No auth required)
+        fetch('http://localhost:3050/api/public')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('publicData').innerText = JSON.stringify(data, null, 2);
+            })
+            .catch(err => {
+                document.getElementById('publicData').innerText = "Error connecting to public API.";
+            });
+
+        // 2. Configure Keycloak
+        const keycloak = new Keycloak({
+            url: 'https://localhost:8443', 
+            realm: 'secure-finance',             
+            clientId: 'finance-portal-spa'             
+        });
+
+        // 3. Check for existing sessions silently
+        try {
+            await keycloak.init({ 
+                onLoad: 'check-sso',
+                checkLoginIframe: false 
+            });
+
+                     
+            
+        //    if (keycloak.authenticated) {
+        //        const btn = document.getElementById('loginBtn');
+         //       btn.innerText = "Enter Secure Dashboard (Session Active)";
+         //       btn.style.backgroundColor = "#17a2b8"; // Change color to indicate active state
+         //   }
+
+        } catch (error) {
+            console.error("Keycloak initialization failed", error);
+        }
+
+        // 4. Handle the manual login click
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            if (keycloak.authenticated) {
+                // If the user has a session, route them the dashboard directly
+                window.location.assign('/dashboard.html');
+            } else {
+                // If no session exists, then redirect them to Keycloak login screen, once they enter the credentials keycloak should redirect them to callback.html and not to index.html
+                const callbackUrl = window.location.origin + '/callback.html';
+                keycloak.login({ redirectUri: callbackUrl,
+                scope: "openid profile email finance-abac-claims"
+              });
+            }
+        });
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,47 @@
+dn: cn=auditors,ou=groups,dc=cyberlab,dc=local
+objectClass: groupOfNames
+cn: auditors
+member: cn=tom,ou=users,dc=cyberlab,dc=local
+member: cn=sam,ou=users,dc=cyberlab,dc=local
+
+dn: cn=advisor,ou=groups,dc=cyberlab,dc=local
+objectClass: groupOfNames
+cn: advisor
+member: cn=cathy,ou=users,dc=cyberlab,dc=local
+member: cn=jack,ou=users,dc=cyberlab,dc=local
+
+dn: cn=tom,ou=users,dc=cyberlab,dc=local
+objectClass: inetOrgPerson
+sn: Auditor
+givenName: Tom
+cn: tom
+uid: tom
+mail: tom@cyberlab.local
+userPassword: password123
+
+dn: cn=sam,ou=users,dc=cyberlab,dc=local
+objectClass: inetOrgPerson
+sn: Auditor
+givenName: Sam
+cn: sam
+uid: sam
+mail: sam@cyberlab.local
+userPassword: password123
+
+dn: cn=jack,ou=users,dc=cyberlab,dc=local
+objectClass: inetOrgPerson
+sn: Advisor
+givenName: Jack
+cn: jack
+uid: jack
+mail: jack@cyberlab.local
+userPassword: password123
+
+dn: cn=cathy,ou=users,dc=cyberlab,dc=local
+objectClass: inetOrgPerson
+sn: Advisor
+givenName: Cathy
+cn: cathy
+uid: cathy
+mail: cathy@cyberlab.local
+userPassword: password123
