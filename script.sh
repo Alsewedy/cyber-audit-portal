@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-KEYCLOAK_URL="https://localhost:8443/realms/secure-finance/protocol/openid-connect/token"
+KEYCLOAK_URL="http://192.168.30.10:8080/realms/secure-finance/protocol/openid-connect/token"
 API_BASE_URL="http://localhost:3050/api"
 CLIENT_ID="report-verifier-client"
 CLIENT_SECRET="${REPORT_VERIFIER_CLIENT_SECRET}"

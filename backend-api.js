@@ -139,7 +139,7 @@ function requireApiAudience(req, res, next) {
 
 
 // --- Token Introspection for High-Risk Endpoints ---
-const KEYCLOAK_INTROSPECTION_URL = "https://localhost:8443/realms/secure-finance/protocol/openid-connect/token/introspect";
+const KEYCLOAK_INTROSPECTION_URL = "http://192.168.30.10:8080/realms/secure-finance/protocol/openid-connect/token/introspect";
 const INTROSPECTION_CLIENT_ID = "report-verifier-client";
 
 async function introspectAccessToken(token) {
@@ -192,9 +192,9 @@ async function requireActiveToken(req, res, next) {
 
 
 // --- Simple Risk-Based Access Control for Approval Endpoint ---
-const KEYCLOAK_ADMIN_TOKEN_URL = "https://localhost:8443/realms/master/protocol/openid-connect/token";
-const KEYCLOAK_ADMIN_USERS_URL = "https://localhost:8443/admin/realms/secure-finance/users";
-const KEYCLOAK_EVENTS_URL = "https://localhost:8443/admin/realms/secure-finance/events";
+const KEYCLOAK_ADMIN_TOKEN_URL = "http://192.168.30.10:8080/realms/master/protocol/openid-connect/token";
+const KEYCLOAK_ADMIN_USERS_URL = "http://192.168.30.10:8080/admin/realms/secure-finance/users";
+const KEYCLOAK_EVENTS_URL = "http://192.168.30.10:8080/admin/realms/secure-finance/events";
 const RISK_DENY_THRESHOLD = 70;
 const RISK_EVENT_WINDOW_MS = 10 * 60 * 1000; // last 10 minutes
 
