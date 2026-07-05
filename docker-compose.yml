@@ -1,0 +1,20 @@
+services:
+  cyber-audit-backend:
+    image: cyber-audit-portal:baseline
+    container_name: cyber-audit-backend
+    command: node backend-api.js
+    ports:
+      - "3050:3050"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  cyber-audit-frontend:
+    image: cyber-audit-portal:baseline
+    container_name: cyber-audit-frontend
+    command: node server.js
+    ports:
+      - "4500:4500"
+    depends_on:
+      - cyber-audit-backend
+    restart: unless-stopped
