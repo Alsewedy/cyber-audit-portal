@@ -1,0 +1,26 @@
+services:
+  cyber-audit-dev-backend:
+    build: .
+    container_name: cyber-audit-dev-backend
+    command: node backend-api.js
+    ports:
+      - "3050:3050"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+    restart: unless-stopped
+
+  cyber-audit-dev-frontend:
+    build: .
+    container_name: cyber-audit-dev-frontend
+    command: node server.js
+    ports:
+      - "4500:4500"
+    depends_on:
+      - cyber-audit-dev-backend
+    volumes:
+      - .:/app
+      - /app/node_modules
+    restart: unless-stopped
