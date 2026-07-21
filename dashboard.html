@@ -31,25 +31,25 @@
     </div>
 
     <div id="viewSection" class="card" style="background-color: #e3f2fd; border-color: #bbdefb;">
-        <h3 style="margin-top: 0;">View Audit Findings</h3>
+        <h3 style="margin-top: 0;">View Audit Evidence</h3>
         <p style="font-size: 14px; color: #555;">(Accessible to all authorized GRC Lab audit staff)</p>
-        <button id="viewBtn">Show Approved Findings</button>
-        <button id="allBtn" class="hidden">Show All Findings</button>
+        <button id="viewBtn">Show Accepted Evidence</button>
+        <button id="allBtn" class="hidden">Show All Evidence</button>
     </div>
     
     <div id="approveSection" class="card hidden" style="background-color: #fff3cd; border-color: #ffeeba;">
-        <h3 style="margin-top: 0;">Approve Audit Finding</h3>
-        <p style="font-size: 14px; color: #555;">(Restricted to Finance Managers)</p>
-        <button id="pendingBtn" style="background-color: #ffc107; color: black;">Show Tested Findings (Needs Approval)</button>
+        <h3 style="margin-top: 0;">Accept Audit Evidence</h3>
+        <p style="font-size: 14px; color: #555;">(Restricted to Finance Managers — lifecycle: SUBMITTED → VALIDATED → ACCEPTED)</p>
+        <button id="pendingBtn" style="background-color: #ffc107; color: black;">Show Submitted Evidence</button>
         
         <div style="margin-top: 15px;">
-            <label for="reportID"><strong>Finding ID to Approve:</strong></label>
-            <input type="text" id="reportID" placeholder="e.g., REP-003" style="margin-bottom: 10px; padding: 5px; display: block; width: 200px;" />
-            <button id="approveBtn" style="background-color: #28a745;">Approve Finding</button>
+            <label for="reportID"><strong>Evidence ID to Accept:</strong></label>
+            <input type="text" id="reportID" placeholder="e.g., EVD-003" style="margin-bottom: 10px; padding: 5px; display: block; width: 200px;" />
+            <button id="approveBtn" style="background-color: #28a745;">Accept Evidence</button>
         </div>
     </div>
 
-    <h3 style="margin-top: 30px;">API Response:</h3>
+    <h3 style="margin-top: 30px;">Evidence API Response:</h3>
     <pre id="apiResponse" style="
     background-color: #0f172a; 
     color: #fbbf24; 
@@ -166,7 +166,7 @@
       document.getElementById('approveBtn').addEventListener('click', () => {
           const reportId = document.getElementById('reportID').value.trim();
           if (!reportId) {
-              alert("Please enter a Finding ID.");
+              alert("Please enter an Evidence ID.");
               return;
           }
           fetchAPI(`/api/approve/report/${reportId}`, 'PATCH');

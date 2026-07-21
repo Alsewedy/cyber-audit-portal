@@ -10,7 +10,7 @@ if [ -z "$CLIENT_SECRET" ]; then
     echo "Missing REPORT_VERIFIER_CLIENT_SECRET environment variable."
     exit 1
 fi
-echo "Starting Automated Verification Job (Shell)..."
+echo "Starting Automated Evidence Validation Job (Shell)..."
 
 #specify the correct grant_type
 echo "Authenticating..."
@@ -28,19 +28,19 @@ if [ "$TOKEN" == "null" ] || [ -z "$TOKEN" ]; then
 fi
 echo "✓ Service Account Machine Token Acquired"
 
-# Fetch all reports and use jq to filter for PENDING ones, returning just their IDs
-PENDING_IDS=$(curl -s -H "Authorization: Bearer $TOKEN" "$API_BASE_URL/pending/report" | jq -r '.[] | select(.status=="PENDING") | .id')
+# Fetch all evidence and use jq to filter for SUBMITTED items, returning just their IDs
+SUBMITTED_IDS=$(curl -s -H "Authorization: Bearer $TOKEN" "$API_BASE_URL/pending/report" | jq -r '.[] | select(.status=="SUBMITTED") | .id')
 
-if [ -z "$PENDING_IDS" ]; then
-    echo "No pending reports found. Exiting."
+if [ -z "$SUBMITTED_IDS" ]; then
+    echo "No SUBMITTED evidence found. Exiting."
     exit 0
 fi
 
-# Process and Verify each pending report
-for ID in $PENDING_IDS; do
-    echo "  -> Running automated compliance checks on $ID..."
+# Process and validate each submitted evidence item
+for ID in $SUBMITTED_IDS; do
+    echo "  -> Running automated controls validation on evidence $ID..."
     
-    # Send the PATCH request to verify and show the backend ABAC response
+    # Send the PATCH request to validate and show the backend ABAC response
 VERIFY_RES=$(curl -s -X PATCH \
     -H "Authorization: Bearer $TOKEN" \
     "$API_BASE_URL/system/verify/$ID")
@@ -48,11 +48,11 @@ VERIFY_RES=$(curl -s -X PATCH \
 echo "$VERIFY_RES" | jq
 
 if echo "$VERIFY_RES" | jq -e '.abacDecision' > /dev/null; then
-    echo "  -> [SUCCESS] $ID status updated to VERIFIED."
+    echo "  -> [SUCCESS] $ID status updated to VALIDATED."
 else
-    echo "  -> [FAILED] Could not verify $ID."
+    echo "  -> [FAILED] Could not validate evidence $ID."
 fi
 
 done
 
-echo "Verification Job Complete."
+echo "Evidence Validation Job Complete."
