@@ -29,6 +29,11 @@
       .queue-success { font-size: 14px; color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 8px 12px; border-radius: 4px; margin: 8px 0; }
       .manual-acceptance-fallback { margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; }
       .manual-acceptance-fallback h4 { margin: 0 0 10px; font-size: 15px; color: #555; }
+      #analystQueueContainer { overflow-x: auto; }
+      .review-note-input { box-sizing: border-box; min-width: 180px; padding: 6px; }
+      .validate-row-btn { background-color: #6f42c1; padding: 6px 12px; margin: 0; font-size: 13px; }
+      .validate-row-btn:hover { background-color: #59339d; }
+      .validate-row-btn:disabled { background-color: #b7a2d8; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -44,6 +49,34 @@
         <p style="font-size: 14px; color: #555;">(Restricted to Accountants &amp; Finance Managers)</p>
         <input type="file" id="reportFile" disabled style="margin-bottom: 10px; display: block;" />
         <button id="uploadBtn">Upload Evidence</button>
+    </div>
+
+    <div id="analystReviewSection" class="card hidden" style="background-color: #f3e8ff; border-color: #d8b4fe;">
+        <h3 style="margin-top: 0;">Analyst Evidence Review</h3>
+        <p style="font-size: 14px; color: #555;">Review SUBMITTED evidence and validate it for manager acceptance.</p>
+        <button type="button" id="refreshAnalystQueueBtn" style="background-color: #6f42c1;">Refresh Submitted Evidence</button>
+
+        <p id="analystSuccessMessage" class="queue-success hidden"></p>
+
+        <div id="analystQueueContainer" class="hidden">
+            <table id="analystQueueTable" class="evidence-table">
+                <thead>
+                    <tr>
+                        <th>Evidence ID</th>
+                        <th>Author</th>
+                        <th>Filename</th>
+                        <th>Date</th>
+                        <th>Sensitivity</th>
+                        <th>Region</th>
+                        <th>Status</th>
+                        <th>Review Note</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="analystQueueBody"></tbody>
+            </table>
+            <p id="analystQueueEmpty" class="hidden" style="font-size: 14px; color: #555; margin-top: 10px;">No submitted evidence awaiting analyst review.</p>
+        </div>
     </div>
 
     <div id="approveSection" class="card hidden" style="background-color: #fff3cd; border-color: #ffeeba;">
@@ -141,6 +174,10 @@
             if (roles.includes('accountant')) {
                 document.getElementById('uploadSection').classList.remove('hidden');
                 document.getElementById('reportFile').removeAttribute('disabled');
+            }
+            if (roles.includes('analyst')) {
+                document.getElementById('analystReviewSection').classList.remove('hidden');
+                loadAnalystQueue({ updateApiResponse: true });
             }
             if (roles.includes('finance-manager')) {
                 document.getElementById('approveSection').classList.remove('hidden');
@@ -302,6 +339,111 @@
           }
       }
 
+      function showAnalystSuccess(message) {
+          const successEl = document.getElementById("analystSuccessMessage");
+          successEl.textContent = message;
+          successEl.classList.remove("hidden");
+      }
+
+      function hideAnalystSuccess() {
+          document.getElementById("analystSuccessMessage").classList.add("hidden");
+      }
+
+      function renderAnalystQueueRows(items) {
+          const tbody = document.getElementById("analystQueueBody");
+          tbody.innerHTML = "";
+
+          items.forEach(item => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                  <td>${escapeHtml(item.id)}</td>
+                  <td>${escapeHtml(item.author)}</td>
+                  <td>${escapeHtml(item.filename)}</td>
+                  <td>${escapeHtml(item.date)}</td>
+                  <td>${escapeHtml(item.sensitivity)}</td>
+                  <td>${escapeHtml(item.region)}</td>
+                  <td>${escapeHtml(item.status)}</td>
+                  <td><input type="text" class="review-note-input" maxlength="1000" placeholder="Optional review note" aria-label="Review note for ${escapeHtml(item.id)}"></td>
+                  <td><button type="button" class="validate-row-btn" data-evidence-id="${escapeHtml(item.id)}">Validate</button></td>
+              `;
+              tbody.appendChild(row);
+          });
+
+          tbody.querySelectorAll(".validate-row-btn").forEach(btn => {
+              btn.addEventListener("click", () => {
+                  const noteInput = btn.closest("tr").querySelector(".review-note-input");
+                  validateEvidence(btn.dataset.evidenceId, noteInput.value, btn);
+              });
+          });
+      }
+
+      async function loadAnalystQueue({ updateApiResponse = true } = {}) {
+          const container = document.getElementById("analystQueueContainer");
+          const emptyMsg = document.getElementById("analystQueueEmpty");
+          const table = document.getElementById("analystQueueTable");
+
+          if (updateApiResponse) {
+              document.getElementById("apiResponse").innerText = "Loading submitted evidence...";
+          }
+
+          try {
+              const res = await fetch("http://localhost:3050/api/pending/report", {
+                  headers: { "Authorization": "Bearer " + keycloak.token }
+              });
+              const data = await res.json();
+
+              if (updateApiResponse) {
+                  document.getElementById("apiResponse").innerText = JSON.stringify(data, null, 2);
+              }
+
+              container.classList.remove("hidden");
+
+              if (!res.ok || !Array.isArray(data) || data.length === 0) {
+                  document.getElementById("analystQueueBody").innerHTML = "";
+                  table.classList.add("hidden");
+                  emptyMsg.classList.remove("hidden");
+                  return;
+              }
+
+              table.classList.remove("hidden");
+              emptyMsg.classList.add("hidden");
+              renderAnalystQueueRows(data);
+          } catch (err) {
+              if (updateApiResponse) {
+                  document.getElementById("apiResponse").innerText = "Error: " + err.message;
+              }
+          }
+      }
+
+      async function validateEvidence(evidenceId, reviewNote, buttonEl) {
+          hideAnalystSuccess();
+          buttonEl.disabled = true;
+          document.getElementById("apiResponse").innerText = "Processing validation...";
+
+          try {
+              const res = await fetch(`http://localhost:3050/api/analyst/validate/${encodeURIComponent(evidenceId)}`, {
+                  method: "PATCH",
+                  headers: {
+                      "Authorization": "Bearer " + keycloak.token,
+                      "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({ review_note: reviewNote })
+              });
+              const data = await res.json();
+              document.getElementById("apiResponse").innerText = JSON.stringify(data, null, 2);
+
+              if (res.ok) {
+                  showAnalystSuccess(`${evidenceId} validated successfully.`);
+                  await loadAnalystQueue({ updateApiResponse: false });
+              } else {
+                  buttonEl.disabled = false;
+              }
+          } catch (err) {
+              document.getElementById("apiResponse").innerText = "Error: " + err.message;
+              buttonEl.disabled = false;
+          }
+      }
+
       // --- Button Event Listeners ---
       document.getElementById('logoutBtn').addEventListener('click', () => {
           keycloak.logout({ redirectUri: window.location.origin + '/index.html' });
@@ -333,6 +475,11 @@
               hideQueueSuccess();
               loadEvidenceQueue(btn.dataset.queueTab, { updateApiResponse: true });
           });
+      });
+
+      document.getElementById('refreshAnalystQueueBtn').addEventListener('click', () => {
+          hideAnalystSuccess();
+          loadAnalystQueue({ updateApiResponse: true });
       });
 
       // Approve Button (Reads the text box and uses PATCH)

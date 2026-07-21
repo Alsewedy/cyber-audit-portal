@@ -7,6 +7,7 @@ const path = require('path');
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 const PORT = 3050;
 
 // --- Setup Multer for File Storage ---
@@ -390,7 +391,7 @@ app.get('/api/verified/report', verifyToken, requireApiAudience, requireActiveTo
 });
 
 // View SUBMITTED Evidence
-app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager','system-auditor']), (req, res) => {
+app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst', 'system-auditor']), (req, res) => {
     const roles = req.user.realm_access?.roles || [];
 
     // Machine/service path: automated validator
@@ -411,6 +412,21 @@ app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveTok
 
         if (!isFrontendRequest(req)) {
             return denyAbac(res, "Manager submitted evidence access must come from the audit dashboard.");
+        }
+
+        const submitted = evidenceItems.filter(r =>
+            r.status === "SUBMITTED" &&
+            req.user.region === r.region &&
+            hasSufficientClearance(req.user.clearanceLevel, r.sensitivity)
+        );
+
+        return res.json(submitted);
+    }
+
+    // Human path: analyst
+    if (roles.includes('analyst')) {
+        if (!isFrontendRequest(req)) {
+            return denyAbac(res, "Analyst submitted evidence access must come from the audit dashboard.");
         }
 
         const submitted = evidenceItems.filter(r =>
@@ -547,6 +563,54 @@ app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requi
             evidenceStatusBeforeValidation: "SUBMITTED",
             evidenceSensitivity: evidence.sensitivity,
             evidenceRegion: evidence.region
+        }
+    });
+});
+
+// Analyst Validation Endpoint (Status SUBMITTED -> VALIDATED)
+app.patch('/api/analyst/validate/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), (req, res) => {
+    const evidenceIndex = evidenceItems.findIndex(r => r.id === req.params.reportID);
+    if (evidenceIndex === -1) return res.status(404).json({ error: "Evidence not found." });
+
+    const evidence = evidenceItems[evidenceIndex];
+    const requestSource = getRequestSource(req);
+
+    if (evidence.status !== "SUBMITTED") {
+        return denyAbac(res, "Only SUBMITTED evidence can be validated by an analyst.");
+    }
+
+    if (!isFrontendRequest(req)) {
+        return denyAbac(res, "Analyst validation must come from the audit dashboard.");
+    }
+
+    if (req.user.region !== evidence.region) {
+        return denyAbac(res, "Analyst region does not match the evidence region.");
+    }
+
+    if (!hasSufficientClearance(req.user.clearanceLevel, evidence.sensitivity)) {
+        return denyAbac(res, "Analyst clearance level is not sufficient for this evidence sensitivity.");
+    }
+
+    const reviewNote = typeof req.body?.review_note === "string"
+        ? req.body.review_note.trim()
+        : "";
+
+    evidence.status = "VALIDATED";
+    evidence.validated_by = req.user.preferred_username;
+    evidence.validated_date = new Date().toISOString();
+    evidence.review_note = reviewNote;
+
+    res.json({
+        message: `Evidence ${req.params.reportID} successfully VALIDATED by ${req.user.preferred_username}.`,
+        abacDecision: "Allowed by hybrid RBAC + ABAC policy",
+        evidence: evidence,
+        checkedAttributes: {
+            clearanceLevel: req.user.clearanceLevel,
+            userRegion: req.user.region,
+            evidenceSensitivity: evidence.sensitivity,
+            evidenceRegion: evidence.region,
+            requestSource: requestSource,
+            evidenceStatusBeforeValidation: "SUBMITTED"
         }
     });
 });
