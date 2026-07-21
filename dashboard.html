@@ -13,6 +13,22 @@
       #logoutBtn:hover { background-color: #c82333; }
       pre { background: #f4f4f4; padding: 10px; max-height: 250px; overflow: auto; border: 1px solid #ddd; }
       .role-badge { background-color: #e3f2fd; color: #1976d2; padding: 4px 10px; border-radius: 12px; font-size: 14px; margin-right: 5px; display: inline-block; }
+      .evidence-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+      .evidence-table th, .evidence-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      .evidence-table th { background-color: #f8f9fa; }
+      .evidence-table tbody tr:nth-child(even) { background-color: #fffdf5; }
+      .accept-row-btn { background-color: #28a745; padding: 6px 12px; margin: 0; font-size: 13px; }
+      .accept-row-btn:hover { background-color: #218838; }
+      .accept-row-btn:disabled { background-color: #94d3a2; cursor: not-allowed; }
+      #evidenceQueueContainer { overflow-x: auto; }
+      .queue-tabs { display: flex; gap: 8px; margin: 12px 0 8px; flex-wrap: wrap; }
+      .queue-tab { background-color: #e9ecef; color: #333; margin: 0; }
+      .queue-tab:hover { background-color: #dee2e6; }
+      .queue-tab.active { background-color: #0056b3; color: white; }
+      .queue-tab.active:hover { background-color: #004494; }
+      .queue-success { font-size: 14px; color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 8px 12px; border-radius: 4px; margin: 8px 0; }
+      .manual-acceptance-fallback { margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; }
+      .manual-acceptance-fallback h4 { margin: 0 0 10px; font-size: 15px; color: #555; }
     </style>
 </head>
 <body>
@@ -30,19 +46,39 @@
         <button id="uploadBtn">Upload Evidence</button>
     </div>
 
-    <div id="viewSection" class="card" style="background-color: #e3f2fd; border-color: #bbdefb;">
-        <h3 style="margin-top: 0;">View Audit Evidence</h3>
-        <p style="font-size: 14px; color: #555;">(Accessible to all authorized GRC Lab audit staff)</p>
-        <button id="viewBtn">Show Accepted Evidence</button>
-        <button id="allBtn" class="hidden">Show All Evidence</button>
-    </div>
-    
     <div id="approveSection" class="card hidden" style="background-color: #fff3cd; border-color: #ffeeba;">
-        <h3 style="margin-top: 0;">Accept Audit Evidence</h3>
+        <h3 style="margin-top: 0;">Evidence Queue</h3>
         <p style="font-size: 14px; color: #555;">(Restricted to Finance Managers — lifecycle: SUBMITTED → VALIDATED → ACCEPTED)</p>
-        <button id="pendingBtn" style="background-color: #ffc107; color: black;">Show Submitted Evidence</button>
-        
-        <div style="margin-top: 15px;">
+
+        <div class="queue-tabs">
+            <button type="button" class="queue-tab" data-queue-tab="submitted">Submitted</button>
+            <button type="button" class="queue-tab" data-queue-tab="awaiting">Awaiting Acceptance</button>
+            <button type="button" class="queue-tab" data-queue-tab="accepted">Accepted</button>
+        </div>
+
+        <p id="queueSuccessMessage" class="queue-success hidden"></p>
+
+        <div id="evidenceQueueContainer" class="hidden">
+            <table id="evidenceQueueTable" class="evidence-table">
+                <thead>
+                    <tr>
+                        <th>Evidence ID</th>
+                        <th>Author</th>
+                        <th>Filename</th>
+                        <th>Date</th>
+                        <th>Sensitivity</th>
+                        <th>Region</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="evidenceQueueBody"></tbody>
+            </table>
+            <p id="evidenceQueueEmpty" class="hidden" style="font-size: 14px; color: #555; margin-top: 10px;"></p>
+        </div>
+
+        <div class="manual-acceptance-fallback">
+            <h4>Manual Acceptance (Fallback)</h4>
             <label for="reportID"><strong>Evidence ID to Accept:</strong></label>
             <input type="text" id="reportID" placeholder="e.g., EVD-003" style="margin-bottom: 10px; padding: 5px; display: block; width: 200px;" />
             <button id="approveBtn" style="background-color: #28a745;">Accept Evidence</button>
@@ -108,7 +144,6 @@
             }
             if (roles.includes('finance-manager')) {
                 document.getElementById('approveSection').classList.remove('hidden');
-                document.getElementById('allBtn').classList.remove('hidden');
             }
         }
       } catch (error) {
@@ -129,6 +164,142 @@
               if (!res.ok) return;
           })
           .catch(err => document.getElementById("apiResponse").innerText = "Error: " + err.message);
+      }
+
+      function escapeHtml(value) {
+          return String(value ?? "")
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;");
+      }
+
+      const QUEUE_TABS = {
+          submitted: {
+              endpoint: "/api/pending/report",
+              emptyMessage: "No submitted evidence in queue."
+          },
+          awaiting: {
+              endpoint: "/api/verified/report",
+              emptyMessage: "No validated evidence awaiting acceptance."
+          },
+          accepted: {
+              endpoint: "/api/view/report",
+              emptyMessage: "No accepted evidence found."
+          }
+      };
+
+      function setActiveQueueTab(tabKey) {
+          document.querySelectorAll(".queue-tab").forEach(btn => {
+              btn.classList.toggle("active", btn.dataset.queueTab === tabKey);
+          });
+      }
+
+      function showQueueSuccess(message) {
+          const successEl = document.getElementById("queueSuccessMessage");
+          successEl.textContent = message;
+          successEl.classList.remove("hidden");
+      }
+
+      function hideQueueSuccess() {
+          document.getElementById("queueSuccessMessage").classList.add("hidden");
+      }
+
+      function renderEvidenceQueueRows(items) {
+          const tbody = document.getElementById("evidenceQueueBody");
+          tbody.innerHTML = "";
+
+          items.forEach(item => {
+              const actionCell = item.status === "VALIDATED"
+                  ? `<button type="button" class="accept-row-btn" data-evidence-id="${escapeHtml(item.id)}">Accept</button>`
+                  : "";
+
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                  <td>${escapeHtml(item.id)}</td>
+                  <td>${escapeHtml(item.author)}</td>
+                  <td>${escapeHtml(item.filename)}</td>
+                  <td>${escapeHtml(item.date)}</td>
+                  <td>${escapeHtml(item.sensitivity)}</td>
+                  <td>${escapeHtml(item.region)}</td>
+                  <td>${escapeHtml(item.status)}</td>
+                  <td>${actionCell}</td>
+              `;
+              tbody.appendChild(row);
+          });
+
+          tbody.querySelectorAll(".accept-row-btn").forEach(btn => {
+              btn.addEventListener("click", () => acceptEvidence(btn.dataset.evidenceId, btn));
+          });
+      }
+
+      async function loadEvidenceQueue(tabKey, { updateApiResponse = true } = {}) {
+          const tab = QUEUE_TABS[tabKey];
+          if (!tab) return;
+
+          setActiveQueueTab(tabKey);
+
+          const container = document.getElementById("evidenceQueueContainer");
+          const emptyMsg = document.getElementById("evidenceQueueEmpty");
+          const table = document.getElementById("evidenceQueueTable");
+
+          if (updateApiResponse) {
+              document.getElementById("apiResponse").innerText = "Loading evidence queue...";
+          }
+
+          try {
+              const res = await fetch(`http://localhost:3050${tab.endpoint}`, {
+                  headers: { "Authorization": "Bearer " + keycloak.token }
+              });
+              const data = await res.json();
+
+              if (updateApiResponse) {
+                  document.getElementById("apiResponse").innerText = JSON.stringify(data, null, 2);
+              }
+
+              container.classList.remove("hidden");
+              emptyMsg.textContent = tab.emptyMessage;
+
+              if (!res.ok || !Array.isArray(data) || data.length === 0) {
+                  document.getElementById("evidenceQueueBody").innerHTML = "";
+                  table.classList.add("hidden");
+                  emptyMsg.classList.remove("hidden");
+                  return;
+              }
+
+              table.classList.remove("hidden");
+              emptyMsg.classList.add("hidden");
+              renderEvidenceQueueRows(data);
+          } catch (err) {
+              if (updateApiResponse) {
+                  document.getElementById("apiResponse").innerText = "Error: " + err.message;
+              }
+          }
+      }
+
+      async function acceptEvidence(evidenceId, buttonEl) {
+          hideQueueSuccess();
+          if (buttonEl) buttonEl.disabled = true;
+          document.getElementById("apiResponse").innerText = "Processing acceptance...";
+
+          try {
+              const res = await fetch(`http://localhost:3050/api/approve/report/${encodeURIComponent(evidenceId)}`, {
+                  method: "PATCH",
+                  headers: { "Authorization": "Bearer " + keycloak.token }
+              });
+              const data = await res.json();
+              document.getElementById("apiResponse").innerText = JSON.stringify(data, null, 2);
+
+              if (res.ok) {
+                  showQueueSuccess(`${evidenceId} accepted successfully.`);
+                  await loadEvidenceQueue("awaiting", { updateApiResponse: false });
+              } else if (buttonEl) {
+                  buttonEl.disabled = false;
+              }
+          } catch (err) {
+              document.getElementById("apiResponse").innerText = "Error: " + err.message;
+              if (buttonEl) buttonEl.disabled = false;
+          }
       }
 
       // --- Button Event Listeners ---
@@ -157,10 +328,12 @@
           .catch(err => document.getElementById("apiResponse").innerText = "Error: " + err.message);
       });
 
-      // View Buttons
-      document.getElementById('viewBtn').addEventListener('click', () => fetchAPI('/api/view/report'));
-      document.getElementById('pendingBtn').addEventListener('click', () => fetchAPI('/api/pending/report'));
-      document.getElementById('allBtn').addEventListener('click', () => fetchAPI('/api/all/report'));
+      document.querySelectorAll('.queue-tab').forEach(btn => {
+          btn.addEventListener('click', () => {
+              hideQueueSuccess();
+              loadEvidenceQueue(btn.dataset.queueTab, { updateApiResponse: true });
+          });
+      });
 
       // Approve Button (Reads the text box and uses PATCH)
       document.getElementById('approveBtn').addEventListener('click', () => {
