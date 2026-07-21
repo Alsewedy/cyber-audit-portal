@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Finance Dashboard - Acme Corp</title>
+    <title>Audit Dashboard - GRC Lab</title>
     <style>
       body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
       .hidden { display: none !important; }
@@ -24,28 +24,28 @@
     <p><strong>Your Assigned Roles:</strong> <span id="roleContainer">Loading roles...</span></p>
 
     <div id="uploadSection" class="card hidden" style="background-color: #e8f5e9; border-color: #c8e6c9;">
-        <h3 style="margin-top: 0;">Upload Financial Report</h3>
-        <p style="font-size: 14px; color: #555;">(Restricted to Accountants & Finance Managers)</p>
+        <h3 style="margin-top: 0;">Upload Audit Evidence</h3>
+        <p style="font-size: 14px; color: #555;">(Restricted to Accountants &amp; Finance Managers)</p>
         <input type="file" id="reportFile" disabled style="margin-bottom: 10px; display: block;" />
-        <button id="uploadBtn">Upload Report</button>
+        <button id="uploadBtn">Upload Evidence</button>
     </div>
 
     <div id="viewSection" class="card" style="background-color: #e3f2fd; border-color: #bbdefb;">
-        <h3 style="margin-top: 0;">View Financial Reports</h3>
-        <p style="font-size: 14px; color: #555;">(Accessible to all authorized finance staff and auditors)</p>
-        <button id="viewBtn">Show Approved Reports</button>
-        <button id="allBtn" class="hidden">Show All Reports</button>
+        <h3 style="margin-top: 0;">View Audit Findings</h3>
+        <p style="font-size: 14px; color: #555;">(Accessible to all authorized GRC Lab audit staff)</p>
+        <button id="viewBtn">Show Approved Findings</button>
+        <button id="allBtn" class="hidden">Show All Findings</button>
     </div>
     
     <div id="approveSection" class="card hidden" style="background-color: #fff3cd; border-color: #ffeeba;">
-        <h3 style="margin-top: 0;">Approve Financial Report</h3>
+        <h3 style="margin-top: 0;">Approve Audit Finding</h3>
         <p style="font-size: 14px; color: #555;">(Restricted to Finance Managers)</p>
-        <button id="pendingBtn" style="background-color: #ffc107; color: black;">Show Verified (Needs Approval)</button>
+        <button id="pendingBtn" style="background-color: #ffc107; color: black;">Show Tested Findings (Needs Approval)</button>
         
         <div style="margin-top: 15px;">
-            <label for="reportID"><strong>Report ID to Approve:</strong></label>
+            <label for="reportID"><strong>Finding ID to Approve:</strong></label>
             <input type="text" id="reportID" placeholder="e.g., REP-003" style="margin-bottom: 10px; padding: 5px; display: block; width: 200px;" />
-            <button id="approveBtn" style="background-color: #28a745;">Approve Report</button>
+            <button id="approveBtn" style="background-color: #28a745;">Approve Finding</button>
         </div>
     </div>
 
@@ -166,7 +166,7 @@
       document.getElementById('approveBtn').addEventListener('click', () => {
           const reportId = document.getElementById('reportID').value.trim();
           if (!reportId) {
-              alert("Please enter a Report ID.");
+              alert("Please enter a Finding ID.");
               return;
           }
           fetchAPI(`/api/approve/report/${reportId}`, 'PATCH');
