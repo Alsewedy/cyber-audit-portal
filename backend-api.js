@@ -130,7 +130,7 @@ function requireApiAudience(req, res, next) {
   if (!hasRequiredAudience(req)) {
     return res.status(403).json({
       error: "Invalid token audience",
-      reason: "Access token is not intended for the Financial Reporting API."
+      reason: "Access token is not intended for the Cyber Audit API."
     });
   }
 
@@ -313,7 +313,7 @@ async function calculateApprovalRisk(req, report) {
 // -------------------------------------------------------
 
 app.get('/api/public', (req, res) => {
-   res.send({ message: 'Welcome to corporate portal' });
+   res.send({ message: 'Welcome to the Cyber Audit Portal' });
 });
 
 // Upload Endpoint (Status becomes PENDING)
@@ -322,12 +322,12 @@ app.post('/api/upload/report', verifyToken, requireApiAudience, requireAnyRole([
 
   // Subject attribute check: only finance department users can upload finance reports
   if (req.user.department !== "finance") {
-    return denyAbac(res, "Only users from the finance department can upload financial reports.");
+    return denyAbac(res, "Only authorized GRC Lab team members can upload audit evidence.");
   }
 
   // Environment attribute check: upload must come from the human frontend
   if (!isFrontendRequest(req)) {
-    return denyAbac(res, "Report upload must come from the frontend dashboard.");
+    return denyAbac(res, "Evidence upload must come from the audit dashboard.");
   }
 
   if (!req.file) return res.status(400).json({ error: "No file was uploaded." });
@@ -347,7 +347,7 @@ app.post('/api/upload/report', verifyToken, requireApiAudience, requireAnyRole([
   financialReports.push(newReport);
 
   res.json({ 
-      message: "Success! Finance report uploaded securely and is PENDING verification.",
+      message: "Success! Audit evidence uploaded securely and is PENDING testing.",
       abacDecision: "Allowed by hybrid RBAC + ABAC policy",
       checkedAttributes: {
           department: req.user.department,
@@ -373,11 +373,11 @@ app.get('/api/view/report', verifyToken, requireApiAudience, requireAnyRole(['ac
 // View VERIFIED Reports
 app.get('/api/verified/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
     if (req.user.department !== "finance") {
-        return denyAbac(res, "Only finance department users can view verified financial reports.");
+        return denyAbac(res, "Only authorized GRC Lab team members can view tested audit findings.");
     }
 
     if (!isFrontendRequest(req)) {
-        return denyAbac(res, "Verified reports must be viewed through the frontend dashboard.");
+        return denyAbac(res, "Tested findings must be viewed through the audit dashboard.");
     }
 
     const verified = financialReports.filter(r => 
@@ -396,7 +396,7 @@ app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveTok
     // Machine/service path: automated verifier
     if (roles.includes('system-auditor')) {
         if (!isVerifierServiceRequest(req)) {
-            return denyAbac(res, "System-auditor access must come from the report-verifier-client service.");
+            return denyAbac(res, "System-auditor access must come from the automated audit verifier service.");
         }
 
         const pending = financialReports.filter(r => r.status === "PENDING");
@@ -406,11 +406,11 @@ app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveTok
     // Human path: finance manager
     if (roles.includes('finance-manager')) {
         if (req.user.department !== "finance") {
-            return denyAbac(res, "Only finance department users can view pending financial reports.");
+            return denyAbac(res, "Only authorized GRC Lab team members can view pending audit findings.");
         }
 
         if (!isFrontendRequest(req)) {
-            return denyAbac(res, "Finance-manager pending report access must come from the frontend dashboard.");
+            return denyAbac(res, "Manager pending finding access must come from the audit dashboard.");
         }
 
         const pending = financialReports.filter(r => 
@@ -422,21 +422,21 @@ app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveTok
         return res.json(pending);
     }
 
-    return denyAbac(res, "No valid ABAC path for pending report access.");
+    return denyAbac(res, "No valid ABAC path for pending finding access.");
 });
 
 // View ALL Reports
 app.get('/api/all/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
     if (req.user.department !== "finance") {
-        return denyAbac(res, "Only finance department users can view all financial reports.");
+        return denyAbac(res, "Only authorized GRC Lab team members can view all audit findings.");
     }
 
     if (req.user.clearanceLevel !== "high") {
-        return denyAbac(res, "High clearance is required to view all report states.");
+        return denyAbac(res, "High clearance is required to view all finding states.");
     }
 
     if (!isFrontendRequest(req)) {
-        return denyAbac(res, "All-report access must come from the frontend dashboard.");
+        return denyAbac(res, "All-finding access must come from the audit dashboard.");
     }
 
     const scopedReports = financialReports.filter(r => req.user.region === r.region);
@@ -448,7 +448,7 @@ app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requ
     const reportIndex = financialReports.findIndex(r => r.id === req.params.reportID);
     
     if (reportIndex === -1) {
-        return res.status(404).json({ error: "Report not found." });
+        return res.status(404).json({ error: "Finding not found." });
     }
 
     const report = financialReports[reportIndex];
@@ -456,32 +456,32 @@ app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requ
 
     // Resource attribute check: only VERIFIED reports can be approved
     if (report.status !== "VERIFIED") {
-        return denyAbac(res, "Only VERIFIED reports can be approved.");
+        return denyAbac(res, "Only tested findings can be approved.");
     }
 
     // Subject attribute check: user must belong to the finance department
     if (req.user.department !== "finance") {
-        return denyAbac(res, "User department is not allowed to approve financial reports.");
+        return denyAbac(res, "User department is not allowed to approve audit findings.");
     }
 
     // Subject + Resource attribute check: user clearance must match report sensitivity
     if (!hasSufficientClearance(req.user.clearanceLevel, report.sensitivity)) {
-        return denyAbac(res, "User clearance level is not sufficient for this report sensitivity.");
+        return denyAbac(res, "User clearance level is not sufficient for this finding sensitivity.");
     }
 
     // Subject + Resource attribute check: user region must match report region
     if (req.user.region !== report.region) {
-        return denyAbac(res, "User region does not match the report region.");
+        return denyAbac(res, "User region does not match the finding region.");
     }
 
     // Environment attribute check: approval must come from the human frontend client
     if (!isFrontendRequest(req)) {
-        return denyAbac(res, "Approval must come from the frontend dashboard, not from a service client.");
+        return denyAbac(res, "Approval must come from the audit dashboard, not from a service client.");
     }
 
     // Environment attribute check: approval requires successful OTP/MFA evidence
     if (!hasMfa(req)) {
-        return denyAbac(res, "MFA/OTP is required before approving financial reports.");
+        return denyAbac(res, "MFA/OTP is required before approving audit findings.");
     }
 
     // Risk-based access check: suspicious login behaviour can block approval
@@ -501,7 +501,7 @@ app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requ
     report.approved_date = new Date().toISOString();
     
     res.json({ 
-        message: `Report ${req.params.reportID} successfully APPROVED by ${req.user.preferred_username}.`,
+        message: `Finding ${req.params.reportID} successfully APPROVED by ${req.user.preferred_username}.`,
         abacDecision: "Allowed by hybrid RBAC + ABAC policy",
         checkedAttributes: {
             department: req.user.department,
@@ -522,25 +522,25 @@ app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requ
 // Script Verification Endpoint (Status PENDING -> VERIFIED)
 app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['system-auditor']), (req, res) => {
     const reportIndex = financialReports.findIndex(r => r.id === req.params.reportID);
-    if (reportIndex === -1) return res.status(404).json({ error: "Report not found." });
+    if (reportIndex === -1) return res.status(404).json({ error: "Finding not found." });
 
     const report = financialReports[reportIndex];
     const requestSource = getRequestSource(req);
 
     // Environment attribute check: verification must come from the automated service client
     if (!isVerifierServiceRequest(req)) {
-        return denyAbac(res, "Verification must come from the report-verifier-client service.");
+        return denyAbac(res, "Testing must come from the automated audit verifier service.");
     }
 
     // Resource attribute check: only PENDING reports can be verified
     if (report.status !== "PENDING") {
-        return denyAbac(res, "Only PENDING reports can be verified by the automated service.");
+        return denyAbac(res, "Only PENDING findings can be tested by the automated service.");
     }
     
     report.status = "VERIFIED";
 
     res.json({ 
-        message: `Report ${req.params.reportID} successfully VERIFIED by automated script.`,
+        message: `Finding ${req.params.reportID} successfully tested by automated controls check.`,
         abacDecision: "Allowed by hybrid RBAC + ABAC policy",
         checkedAttributes: {
             requestSource: requestSource,
@@ -551,4 +551,4 @@ app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requi
     });
 });
 
-app.listen(PORT, () => console.log(`Finance API running on http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`Cyber Audit API running on http://localhost:${PORT}`));
