@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Configuration
-KEYCLOAK_URL="http://192.168.30.10:8080/realms/secure-finance/protocol/openid-connect/token"
+KEYCLOAK_URL="http://192.168.30.10:8080/realms/cyber-audit-portal/protocol/openid-connect/token"
 API_BASE_URL="http://localhost:3050/api"
-CLIENT_ID="report-verifier-client"
-CLIENT_SECRET="${REPORT_VERIFIER_CLIENT_SECRET}"
+CLIENT_ID="audit-validator-client"
+CLIENT_SECRET="${AUDIT_VALIDATOR_CLIENT_SECRET}"
 
 if [ -z "$CLIENT_SECRET" ]; then
-    echo "Missing REPORT_VERIFIER_CLIENT_SECRET environment variable."
+    echo "Missing AUDIT_VALIDATOR_CLIENT_SECRET environment variable."
     exit 1
 fi
 echo "Starting Automated Evidence Validation Job (Shell)..."

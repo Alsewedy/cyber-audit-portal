@@ -59,8 +59,8 @@
         // 2. Configure Keycloak
         const keycloak = new Keycloak({
             url: 'http://192.168.30.10:8080', 
-            realm: 'secure-finance',             
-            clientId: 'finance-portal-spa'             
+            realm: 'cyber-audit-portal',
+            clientId: 'cyber-audit-portal-spa'
         });
 
         // 3. Check for existing sessions silently
@@ -91,7 +91,7 @@
                 // If no session exists, then redirect them to Keycloak login screen, once they enter the credentials keycloak should redirect them to callback.html and not to index.html
                 const callbackUrl = window.location.origin + '/callback.html';
                 keycloak.login({ redirectUri: callbackUrl,
-                scope: "openid profile email finance-abac-claims"
+                scope: "openid profile email audit-context-claims"
               });
             }
         });
