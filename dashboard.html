@@ -4,346 +4,841 @@
     <meta charset="UTF-8">
     <title>Audit Dashboard - GRC Lab</title>
     <style>
-      body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+      body { font-family: Arial, sans-serif; padding: 20px; max-width: 1450px; margin: auto; color: #1f2937; }
       .hidden { display: none !important; }
-      .card { border: 1px solid #ccc; padding: 15px; margin-top: 20px; border-radius: 5px; }
-      button { padding: 8px 15px; margin: 5px 0; cursor: pointer; background-color: #0056b3; color: white; border: none; border-radius: 4px; }
-      button:hover { background-color: #004494; }
-      #logoutBtn { background-color: #dc3545; }
-      #logoutBtn:hover { background-color: #c82333; }
-      pre { background: #f4f4f4; padding: 10px; max-height: 250px; overflow: auto; border: 1px solid #ddd; }
-      .role-badge { background-color: #e3f2fd; color: #1976d2; padding: 4px 10px; border-radius: 12px; font-size: 14px; margin-right: 5px; display: inline-block; }
-      .evidence-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-      .evidence-table th, .evidence-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-      .evidence-table th { background-color: #f8f9fa; }
-      .evidence-table tbody tr:nth-child(even) { background-color: #fffdf5; }
-      .accept-row-btn { background-color: #28a745; padding: 6px 12px; margin: 0; font-size: 13px; }
-      .accept-row-btn:hover { background-color: #218838; }
-      .accept-row-btn:disabled { background-color: #94d3a2; cursor: not-allowed; }
-      #evidenceQueueContainer { overflow-x: auto; }
-      .queue-tabs { display: flex; gap: 8px; margin: 12px 0 8px; flex-wrap: wrap; }
-      .queue-tab { background-color: #e9ecef; color: #333; margin: 0; }
-      .queue-tab:hover { background-color: #dee2e6; }
-      .queue-tab.active { background-color: #0056b3; color: white; }
-      .queue-tab.active:hover { background-color: #004494; }
-      .queue-success { font-size: 14px; color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 8px 12px; border-radius: 4px; margin: 8px 0; }
-      .manual-acceptance-fallback { margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; }
-      .manual-acceptance-fallback h4 { margin: 0 0 10px; font-size: 15px; color: #555; }
+      .card { border: 1px solid #ccc; padding: 16px; margin-top: 20px; border-radius: 6px; }
+      .subcard { border-top: 1px solid #ddd; padding-top: 14px; margin-top: 16px; }
+      .tabs { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #ccc; }
+      .tab-btn { margin: 0; background: #fff; color: #334155; border: 1px solid #94a3b8; }
+      .tab-btn.active { color: #fff; background: #0056b3; border-color: #0056b3; }
+      .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; }
+      .full-width { grid-column: 1 / -1; }
+      label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; }
+      input, select, textarea { box-sizing: border-box; width: 100%; padding: 7px; border: 1px solid #bbb; border-radius: 3px; }
+      textarea { min-height: 70px; resize: vertical; }
+      button { padding: 8px 14px; margin: 5px 0; cursor: pointer; background: #0056b3; color: #fff; border: 0; border-radius: 4px; }
+      button:hover { background: #004494; }
+      button:disabled { opacity: 0.6; cursor: not-allowed; }
+      #logoutBtn { background: #dc3545; }
+      .role-badge { display: inline-block; margin-right: 5px; padding: 4px 10px; border-radius: 12px; font-size: 14px; color: #1976d2; background: #e3f2fd; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; vertical-align: top; }
+      th { background: #f8f9fa; white-space: nowrap; }
+      tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.55); }
+      .success { padding: 8px 12px; margin: 8px 0; color: #155724; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; }
+      .error { padding: 8px 12px; margin: 8px 0; color: #721c24; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px; }
+      .muted { font-size: 14px; color: #555; }
+      .validate-btn { background: #6f42c1; }
+      .accept-btn, .approve-btn { background: #28a745; }
+      .remediation-btn { background: #b45309; white-space: nowrap; }
+      .retest-btn { background: #0f766e; white-space: nowrap; }
+      .inline-action { display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: 6px; min-width: 300px; }
+      details.debug { margin-top: 30px; }
+      details.debug summary { cursor: pointer; font-size: 20px; font-weight: bold; }
+      pre { max-height: 350px; overflow: auto; padding: 20px; color: #fbbf24; background: #0f172a; border-radius: 10px; line-height: 1.5; }
     </style>
 </head>
 <body>
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+    <header style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #eee;">
         <h1 id="welcomeMessage">Loading Dashboard...</h1>
         <button id="logoutBtn">Logout</button>
-    </div>
-
+    </header>
     <p><strong>Your Assigned Roles:</strong> <span id="roleContainer">Loading roles...</span></p>
+    <p id="globalError" class="error hidden"></p>
+    <nav id="workspaceSwitcher" class="tabs hidden" aria-label="Role workspace selector"></nav>
 
-    <div id="uploadSection" class="card hidden" style="background-color: #e8f5e9; border-color: #c8e6c9;">
-        <h3 style="margin-top: 0;">Upload Audit Evidence</h3>
-        <p style="font-size: 14px; color: #555;">(Restricted to Accountants &amp; Finance Managers)</p>
-        <input type="file" id="reportFile" disabled style="margin-bottom: 10px; display: block;" />
-        <button id="uploadBtn">Upload Evidence</button>
-    </div>
+    <section id="ownerSection" class="card hidden" style="background:#e8f5e9;border-color:#c8e6c9;">
+        <h2 style="margin-top:0;">Control Owner Workspace</h2>
+        <nav class="tabs">
+            <button class="tab-btn active" type="button" data-tab-group="owner" data-tab-target="requests">Assigned Evidence Requests</button>
+            <button class="tab-btn" type="button" data-tab-group="owner" data-tab-target="upload">Upload Evidence</button>
+            <button class="tab-btn" type="button" data-tab-group="owner" data-tab-target="evidence">My Evidence</button>
+            <button class="tab-btn" type="button" data-tab-group="owner" data-tab-target="findings">Assigned Findings</button>
+        </nav>
+        <p id="ownerSuccess" class="success hidden"></p>
 
-    <div id="approveSection" class="card hidden" style="background-color: #fff3cd; border-color: #ffeeba;">
-        <h3 style="margin-top: 0;">Evidence Queue</h3>
-        <p style="font-size: 14px; color: #555;">(Restricted to Finance Managers — lifecycle: SUBMITTED → VALIDATED → ACCEPTED)</p>
-
-        <div class="queue-tabs">
-            <button type="button" class="queue-tab" data-queue-tab="submitted">Submitted</button>
-            <button type="button" class="queue-tab" data-queue-tab="awaiting">Awaiting Acceptance</button>
-            <button type="button" class="queue-tab" data-queue-tab="accepted">Accepted</button>
+        <div data-panel-group="owner" data-panel-target="requests">
+            <button id="refreshOwnerRequestsBtn" type="button">Refresh Assigned Requests</button>
+            <div class="table-wrap">
+                <table id="ownerRequestsTable">
+                    <thead><tr><th>Request</th><th>Audit Item</th><th>Criterion</th><th>Title</th><th>Requested From</th><th>Due</th><th>Status</th></tr></thead>
+                    <tbody id="ownerRequestsBody"></tbody>
+                </table>
+                <p id="ownerRequestsEmpty" class="muted hidden">No OPEN evidence requests are assigned to you.</p>
+            </div>
         </div>
 
-        <p id="queueSuccessMessage" class="queue-success hidden"></p>
-
-        <div id="evidenceQueueContainer" class="hidden">
-            <table id="evidenceQueueTable" class="evidence-table">
-                <thead>
-                    <tr>
-                        <th>Evidence ID</th>
-                        <th>Author</th>
-                        <th>Filename</th>
-                        <th>Date</th>
-                        <th>Sensitivity</th>
-                        <th>Region</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody id="evidenceQueueBody"></tbody>
-            </table>
-            <p id="evidenceQueueEmpty" class="hidden" style="font-size: 14px; color: #555; margin-top: 10px;"></p>
+        <div class="hidden" data-panel-group="owner" data-panel-target="upload">
+            <h3>Upload Evidence Against an OPEN Request</h3>
+            <form id="uploadEvidenceForm">
+                <div class="form-grid">
+                    <div><label for="ownerRequestSelect">Evidence Request</label><select id="ownerRequestSelect" name="evidence_request_id" required><option value="">Select a request</option></select></div>
+                    <div><label for="reportFile">Evidence File</label><input type="file" id="reportFile" name="reportDoc" required></div>
+                    <div class="full-width"><label for="ownerEvidenceDescription">Description</label><input id="ownerEvidenceDescription" name="description"></div>
+                    <div class="full-width"><label for="ownerSubmittedNote">Submitted Note</label><textarea id="ownerSubmittedNote" name="submitted_note"></textarea></div>
+                </div>
+                <button id="uploadBtn" type="submit">Upload Evidence</button>
+            </form>
         </div>
 
-        <div class="manual-acceptance-fallback">
-            <h4>Manual Acceptance (Fallback)</h4>
-            <label for="reportID"><strong>Evidence ID to Accept:</strong></label>
-            <input type="text" id="reportID" placeholder="e.g., EVD-003" style="margin-bottom: 10px; padding: 5px; display: block; width: 200px;" />
-            <button id="approveBtn" style="background-color: #28a745;">Accept Evidence</button>
+        <div class="hidden" data-panel-group="owner" data-panel-target="evidence">
+            <button id="refreshMyEvidenceBtn" type="button">Refresh My Evidence</button>
+            <div class="table-wrap">
+                <table id="myEvidenceTable">
+                    <thead><tr><th>Evidence</th><th>Audit Item</th><th>Request</th><th>Filename</th><th>Submitted</th><th>Status</th><th>Review Note</th></tr></thead>
+                    <tbody id="myEvidenceBody"></tbody>
+                </table>
+                <p id="myEvidenceEmpty" class="muted hidden">You have not submitted evidence.</p>
+            </div>
         </div>
-    </div>
 
-    <h3 style="margin-top: 30px;">Evidence API Response:</h3>
-    <pre id="apiResponse" style="
-    background-color: #0f172a; 
-    color: #fbbf24; 
-    padding: 20px; 
-    border-radius: 12px; 
-    border: 1px solid #1e293b; 
-    font-family: 'Courier New', Courier, monospace; 
-    font-size: 14px; 
-    line-height: 1.6; 
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-    overflow-x: auto;
-">Awaiting action...</pre>
+        <div class="hidden" data-panel-group="owner" data-panel-target="findings">
+            <button id="refreshAssignedFindingsBtn" type="button">Refresh Assigned Findings</button>
+            <div class="table-wrap">
+                <table id="ownerFindingsTable">
+                    <thead><tr><th>Finding</th><th>Audit Item</th><th>Condition</th><th>Due</th><th>Status</th><th>Remediation Action</th></tr></thead>
+                    <tbody id="ownerFindingsBody"></tbody>
+                </table>
+                <p id="ownerFindingsEmpty" class="muted hidden">No active findings are assigned to you.</p>
+            </div>
+        </div>
+    </section>
 
-       <script type="importmap">
-{
-  "imports": {
-    "keycloak-js": "./node_modules/keycloak-js/lib/keycloak.js"
-  }
-}
-</script>
+    <section id="analystSection" class="card hidden" style="background:#f3e8ff;border-color:#d8b4fe;">
+        <h2 style="margin-top:0;">Audit Analyst Workspace</h2>
+        <nav class="tabs">
+            <button class="tab-btn active" type="button" data-tab-group="analyst" data-tab-target="audits">Audit Items</button>
+            <button class="tab-btn" type="button" data-tab-group="analyst" data-tab-target="review">Submitted Evidence Review</button>
+            <button class="tab-btn" type="button" data-tab-group="analyst" data-tab-target="requests">Evidence Requests</button>
+            <button class="tab-btn" type="button" data-tab-group="analyst" data-tab-target="determinations">Determination Drafts</button>
+            <button class="tab-btn" type="button" data-tab-group="analyst" data-tab-target="findings">Finding Drafts</button>
+            <button class="tab-btn" type="button" data-tab-group="analyst" data-tab-target="accepted">Accepted Evidence</button>
+        </nav>
+        <p id="analystSuccess" class="success hidden"></p>
 
+        <div data-panel-group="analyst" data-panel-target="audits">
+            <button id="refreshAnalystAuditsBtn" type="button">Refresh Audit Items</button>
+            <div class="table-wrap">
+                <table id="analystAuditsTable">
+                    <thead><tr><th>ID</th><th>Criterion</th><th>Title</th><th>Owner</th><th>Status</th><th>Draft Determination</th><th>Final Determination</th></tr></thead>
+                    <tbody id="analystAuditsBody"></tbody>
+                </table>
+                <p id="analystAuditsEmpty" class="muted hidden">No audit items found.</p>
+            </div>
+        </div>
+
+        <div class="hidden" data-panel-group="analyst" data-panel-target="review">
+            <button id="refreshAnalystReviewBtn" type="button">Refresh Submitted Evidence</button>
+            <div class="table-wrap">
+                <table id="analystReviewTable">
+                    <thead><tr><th>Audit</th><th>Criterion</th><th>Request</th><th>Evidence</th><th>Filename</th><th>Author</th><th>Submitted Note</th><th>Sensitivity</th><th>Region</th><th>Review Note</th><th>Action</th></tr></thead>
+                    <tbody id="analystReviewBody"></tbody>
+                </table>
+                <p id="analystReviewEmpty" class="muted hidden">No SUBMITTED evidence is awaiting review.</p>
+            </div>
+        </div>
+
+        <div class="hidden" data-panel-group="analyst" data-panel-target="requests">
+            <button id="refreshAnalystRequestsBtn" type="button">Refresh Evidence Requests</button>
+            <div class="table-wrap">
+                <table id="analystRequestsTable">
+                    <thead><tr><th>Request</th><th>Audit</th><th>Criterion</th><th>Title</th><th>Assigned To</th><th>Due</th><th>Status</th><th>Drafted By</th></tr></thead>
+                    <tbody id="analystRequestsBody"></tbody>
+                </table>
+            </div>
+            <form id="draftEvidenceRequestForm" class="subcard">
+                <h3>Draft Evidence Request</h3>
+                <div class="form-grid">
+                    <div><label for="draftRequestAuditId">Audit Item ID</label><input id="draftRequestAuditId" name="audit_item_id" required></div>
+                    <div><label for="draftRequestTitle">Title</label><input id="draftRequestTitle" name="title" required></div>
+                    <div><label for="draftRequestedFrom">Requested From</label><input id="draftRequestedFrom" name="requested_from" required></div>
+                    <div><label for="draftAssignedTo">Assigned Username</label><input id="draftAssignedTo" name="assigned_to" required></div>
+                    <div><label for="draftRequestDue">Due Date</label><input type="date" id="draftRequestDue" name="due_date" required></div>
+                    <div class="full-width"><label for="draftRequestDescription">Description</label><textarea id="draftRequestDescription" name="description" required></textarea></div>
+                </div>
+                <button type="submit">Save Request Draft</button>
+            </form>
+        </div>
+
+        <div class="hidden" data-panel-group="analyst" data-panel-target="determinations">
+            <button id="refreshDeterminationDraftsBtn" type="button">Refresh Determination Context</button>
+            <div class="table-wrap">
+                <table id="determinationDraftsTable">
+                    <thead><tr><th>Audit</th><th>Criterion</th><th>Status</th><th>Draft</th><th>Draft Rationale</th><th>Drafted By</th><th>Final</th></tr></thead>
+                    <tbody id="determinationDraftsBody"></tbody>
+                </table>
+            </div>
+            <form id="draftDeterminationForm" class="subcard">
+                <h3>Draft Determination</h3>
+                <div class="form-grid">
+                    <div><label for="draftDeterminationAuditId">Audit Item ID</label><input id="draftDeterminationAuditId" name="audit_item_id" required></div>
+                    <div><label for="draftDeterminationValue">Determination</label><select id="draftDeterminationValue" name="determination" required><option value="">Select</option><option>SATISFIED</option><option>OTHER_THAN_SATISFIED</option><option>INSUFFICIENT_EVIDENCE</option></select></div>
+                    <div class="full-width"><label for="draftDeterminationRationale">Rationale</label><textarea id="draftDeterminationRationale" name="rationale" required></textarea></div>
+                </div>
+                <button type="submit">Save Determination Draft</button>
+            </form>
+        </div>
+
+        <div class="hidden" data-panel-group="analyst" data-panel-target="findings">
+            <button id="refreshAnalystFindingsBtn" type="button">Refresh Findings</button>
+            <h3>Draft Findings</h3>
+            <div class="table-wrap"><table id="analystDraftFindingsTable"><thead><tr><th>ID</th><th>Audit</th><th>Condition</th><th>Owner</th><th>Due</th><th>Drafted By</th></tr></thead><tbody id="analystDraftFindingsBody"></tbody></table></div>
+            <h3>Approved Findings and Retest</h3>
+            <div class="table-wrap"><table id="analystApprovedFindingsTable"><thead><tr><th>ID</th><th>Audit</th><th>Condition</th><th>Owner</th><th>Status</th><th>Retest Action</th></tr></thead><tbody id="analystApprovedFindingsBody"></tbody></table></div>
+            <form id="draftFindingForm" class="subcard">
+                <h3>Draft Finding</h3>
+                <div class="form-grid">
+                    <div><label for="draftFindingAuditId">Audit Item ID</label><input id="draftFindingAuditId" name="audit_item_id" required></div>
+                    <div><label for="draftFindingOwner">Owner Team</label><input id="draftFindingOwner" name="owner" required></div>
+                    <div><label for="draftFindingAssignee">Assigned Username</label><input id="draftFindingAssignee" name="assigned_to" required></div>
+                    <div><label for="draftFindingDue">Due Date</label><input type="date" id="draftFindingDue" name="due_date" required></div>
+                    <div class="full-width"><label for="draftFindingCondition">Condition</label><textarea id="draftFindingCondition" name="condition" required></textarea></div>
+                    <div class="full-width"><label for="draftFindingCriteria">Criteria</label><textarea id="draftFindingCriteria" name="criteria" required></textarea></div>
+                    <div class="full-width"><label for="draftFindingCause">Cause</label><textarea id="draftFindingCause" name="cause" required></textarea></div>
+                    <div class="full-width"><label for="draftFindingEffect">Effect</label><textarea id="draftFindingEffect" name="effect" required></textarea></div>
+                    <div class="full-width"><label for="draftFindingRecommendation">Recommendation</label><textarea id="draftFindingRecommendation" name="recommendation" required></textarea></div>
+                </div>
+                <button type="submit">Save Finding Draft</button>
+            </form>
+        </div>
+
+        <div class="hidden" data-panel-group="analyst" data-panel-target="accepted">
+            <button id="refreshAcceptedEvidenceBtn" type="button">Refresh Accepted Evidence</button>
+            <div class="table-wrap"><table id="acceptedEvidenceTable"><thead><tr><th>Evidence</th><th>Audit</th><th>Criterion</th><th>Request</th><th>Filename</th><th>Author</th><th>Accepted By</th><th>Accepted Date</th></tr></thead><tbody id="acceptedEvidenceBody"></tbody></table></div>
+            <p id="acceptedEvidenceEmpty" class="muted hidden">No accepted evidence found.</p>
+        </div>
+    </section>
+
+    <section id="managerSection" class="card hidden" style="background:#fff3cd;border-color:#ffeeba;">
+        <h2 style="margin-top:0;">Audit Manager Workspace</h2>
+        <nav class="tabs">
+            <button class="tab-btn active" type="button" data-tab-group="manager" data-tab-target="audits">Audit Items</button>
+            <button class="tab-btn" type="button" data-tab-group="manager" data-tab-target="requests">Evidence Request Approvals</button>
+            <button class="tab-btn" type="button" data-tab-group="manager" data-tab-target="acceptance">Evidence Acceptance</button>
+            <button class="tab-btn" type="button" data-tab-group="manager" data-tab-target="determinations">Determination Approval</button>
+            <button class="tab-btn" type="button" data-tab-group="manager" data-tab-target="findings">Finding Approvals</button>
+            <button class="tab-btn" type="button" data-tab-group="manager" data-tab-target="oversight">Audit Oversight</button>
+        </nav>
+        <p id="managerSuccess" class="success hidden"></p>
+
+        <div data-panel-group="manager" data-panel-target="audits">
+            <button id="refreshManagerAuditsBtn" type="button">Refresh Audit Items</button>
+            <div class="table-wrap"><table id="managerAuditsTable"><thead><tr><th>ID</th><th>Criterion</th><th>Title</th><th>Owner</th><th>Status</th><th>Created By</th></tr></thead><tbody id="managerAuditsBody"></tbody></table></div>
+            <form id="createAuditForm" class="subcard">
+                <h3>Create and Assign Audit Item</h3>
+                <div class="form-grid">
+                    <div><label for="managerCriterion">Criterion ID</label><input id="managerCriterion" name="criterion_id" required></div>
+                    <div><label for="managerAuditTitle">Title</label><input id="managerAuditTitle" name="title" required></div>
+                    <div><label for="managerAuditOwner">Owner</label><input id="managerAuditOwner" name="owner" required></div>
+                    <div class="full-width"><label for="managerAuditDescription">Description</label><textarea id="managerAuditDescription" name="description" required></textarea></div>
+                </div>
+                <button type="submit">Create Audit Item</button>
+            </form>
+        </div>
+
+        <div class="hidden" data-panel-group="manager" data-panel-target="requests">
+            <button id="refreshRequestApprovalsBtn" type="button">Refresh Request Drafts</button>
+            <div class="table-wrap"><table id="requestApprovalsTable"><thead><tr><th>Request</th><th>Audit</th><th>Criterion</th><th>Title</th><th>Assigned To</th><th>Due</th><th>Drafted By</th><th>Action</th></tr></thead><tbody id="requestApprovalsBody"></tbody></table></div>
+            <p id="requestApprovalsEmpty" class="muted hidden">No DRAFT evidence requests await issuance.</p>
+        </div>
+
+        <div class="hidden" data-panel-group="manager" data-panel-target="acceptance">
+            <button id="refreshValidatedEvidenceBtn" type="button">Refresh Awaiting Acceptance</button>
+            <div class="table-wrap"><table id="validatedEvidenceTable"><thead><tr><th>Audit</th><th>Criterion</th><th>Request</th><th>Evidence</th><th>Filename</th><th>Author</th><th>Validated By</th><th>Review Note</th><th>Action</th></tr></thead><tbody id="validatedEvidenceBody"></tbody></table></div>
+            <p id="validatedEvidenceEmpty" class="muted hidden">No VALIDATED evidence awaits acceptance.</p>
+        </div>
+
+        <div class="hidden" data-panel-group="manager" data-panel-target="determinations">
+            <button id="refreshDeterminationApprovalsBtn" type="button">Refresh Determination Drafts</button>
+            <div class="table-wrap"><table id="determinationApprovalsTable"><thead><tr><th>Audit</th><th>Criterion</th><th>Draft</th><th>Draft Rationale</th><th>Drafted By</th><th>Created By</th><th>Action</th></tr></thead><tbody id="determinationApprovalsBody"></tbody></table></div>
+            <form id="concludeAuditForm" class="subcard">
+                <h3>Confirm Final Determination</h3>
+                <div class="form-grid">
+                    <div><label for="concludeAuditId">Audit Item ID</label><input id="concludeAuditId" name="audit_item_id" required></div>
+                    <div><label for="finalDetermination">Final Determination</label><select id="finalDetermination" name="determination" required><option value="">Select</option><option>SATISFIED</option><option>OTHER_THAN_SATISFIED</option><option>INSUFFICIENT_EVIDENCE</option></select></div>
+                    <div class="full-width"><label for="finalRationale">Final Rationale</label><textarea id="finalRationale" name="rationale" required></textarea></div>
+                </div>
+                <button type="submit">Conclude Audit Item</button>
+            </form>
+        </div>
+
+        <div class="hidden" data-panel-group="manager" data-panel-target="findings">
+            <button id="refreshFindingApprovalsBtn" type="button">Refresh Finding Drafts</button>
+            <h3>Draft Findings Awaiting Approval</h3>
+            <div class="table-wrap"><table id="findingApprovalsTable"><thead><tr><th>Finding</th><th>Audit</th><th>Condition</th><th>Owner</th><th>Assigned To</th><th>Drafted By</th><th>Action</th></tr></thead><tbody id="findingApprovalsBody"></tbody></table></div>
+            <p id="findingApprovalsEmpty" class="muted hidden">No DRAFT findings await approval.</p>
+            <h3>Lifecycle Oversight (Read Only)</h3>
+            <div class="table-wrap"><table id="findingOversightTable"><thead><tr><th>Finding</th><th>Audit</th><th>Owner</th><th>Status</th><th>Remediated By</th><th>Retested By</th></tr></thead><tbody id="findingOversightBody"></tbody></table></div>
+        </div>
+
+        <div class="hidden" data-panel-group="manager" data-panel-target="oversight">
+            <button id="refreshOversightBtn" type="button">Refresh Audit Progress</button>
+            <div class="table-wrap"><table id="oversightTable"><thead><tr><th>Audit</th><th>Criterion</th><th>Owner</th><th>Status</th><th>Draft Determination</th><th>Final Determination</th><th>Details</th></tr></thead><tbody id="oversightBody"></tbody></table></div>
+        </div>
+    </section>
+
+    <details id="debugPanel" class="debug">
+        <summary>Evidence API Response</summary>
+        <pre id="apiResponse">Awaiting action...</pre>
+    </details>
+
+    <script type="importmap">{"imports":{"keycloak-js":"./node_modules/keycloak-js/lib/keycloak.js"}}</script>
     <script type="module">
-      import Keycloak from 'keycloak-js';
-      
+      import Keycloak from "keycloak-js";
+
+      const API_BASE = "http://localhost:3050";
       const keycloak = new Keycloak({
-        url: 'http://192.168.30.10:8080', 
-        realm: 'secure-finance', 
-        clientId: 'finance-portal-spa'             
+        url: "http://192.168.30.10:8080",
+        realm: "secure-finance",
+        clientId: "finance-portal-spa"
       });
-      
-      
-      
+      let roles = [];
+      let activeWorkspace = null;
 
       try {
-        const authenticated = await keycloak.init({ 
-        onLoad: 'login-required', 
-        checkLoginIframe: false,
-        scope: 'openid profile email finance-abac-claims'
- });
-
+        const authenticated = await keycloak.init({
+          onLoad: "login-required",
+          checkLoginIframe: false,
+          scope: "openid profile email finance-abac-claims"
+        });
         if (authenticated) {
-            document.getElementById('welcomeMessage').innerText = `Welcome, ${keycloak.idTokenParsed?.preferred_username || 'User'}`;
-            const roles = keycloak.tokenParsed?.realm_access?.roles || [];
-            
-            const roleContainer = document.getElementById('roleContainer');
-            if (roles.length > 0) {
-                roleContainer.innerHTML = roles.map(role => `<span class="role-badge">${role}</span>`).join('');
-            } else {
-                roleContainer.innerText = 'No roles assigned';
+          roles = keycloak.tokenParsed?.realm_access?.roles || [];
+          document.getElementById("welcomeMessage").textContent = `Welcome, ${keycloak.idTokenParsed?.preferred_username || "User"}`;
+          document.getElementById("roleContainer").innerHTML = roles.length
+            ? roles.map(role => `<span class="role-badge">${escapeHtml(role)}</span>`).join("")
+            : "No roles assigned";
+          const availableWorkspaces = [
+            { role: "accountant", key: "owner", label: "Control Owner", eligible: keycloak.tokenParsed?.department === "finance" },
+            { role: "analyst", key: "analyst", label: "Audit Analyst", eligible: true },
+            { role: "finance-manager", key: "manager", label: "Audit Manager", eligible: keycloak.tokenParsed?.department === "finance" }
+          ].filter(workspace => roles.includes(workspace.role) && workspace.eligible);
+          if (availableWorkspaces.length) {
+            activeWorkspace = availableWorkspaces[0].key;
+            if (availableWorkspaces.length > 1) {
+              const switcher = document.getElementById("workspaceSwitcher");
+              switcher.classList.remove("hidden");
+              availableWorkspaces.forEach((workspace, index) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = `tab-btn${index === 0 ? " active" : ""}`;
+                button.dataset.workspaceTarget = workspace.key;
+                button.textContent = workspace.label;
+                button.addEventListener("click", () => {
+                  activateWorkspace(workspace.key);
+                  workspaceDefaultLoaders[workspace.key]?.();
+                });
+                switcher.appendChild(button);
+              });
             }
-
-            // DYNAMIC UI RENDERING
-            if (roles.includes('accountant')) {
-                document.getElementById('uploadSection').classList.remove('hidden');
-                document.getElementById('reportFile').removeAttribute('disabled');
-            }
-            if (roles.includes('finance-manager')) {
-                document.getElementById('approveSection').classList.remove('hidden');
-            }
+            activateWorkspace(activeWorkspace);
+          } else if (roles.some(role => ["accountant", "analyst", "finance-manager"].includes(role))) {
+            showError("Your role is not eligible for an interactive workspace with the current authorization attributes.");
+          }
         }
       } catch (error) {
-        document.getElementById('apiResponse').innerText = 'Failed to initialize Keycloak.';
-      }
-
-      // --- Helper for fetching ---
-      function fetchAPI(endpoint, method = 'GET') {
-          document.getElementById("apiResponse").innerText = "Processing...";
-          fetch(`http://localhost:3050${endpoint}`, {
-              method: method,
-              headers: { "Authorization": "Bearer " + keycloak.token }
-          })
-          .then(async res => {
-              const data = await res.json();
-              document.getElementById("apiResponse").innerText = JSON.stringify(data, null, 2);
-
-              if (!res.ok) return;
-          })
-          .catch(err => document.getElementById("apiResponse").innerText = "Error: " + err.message);
+        showError("Failed to initialize Keycloak.");
       }
 
       function escapeHtml(value) {
-          return String(value ?? "")
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/"/g, "&quot;");
+        return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
       }
 
-      const QUEUE_TABS = {
-          submitted: {
-              endpoint: "/api/pending/report",
-              emptyMessage: "No submitted evidence in queue."
-          },
-          awaiting: {
-              endpoint: "/api/verified/report",
-              emptyMessage: "No validated evidence awaiting acceptance."
-          },
-          accepted: {
-              endpoint: "/api/view/report",
-              emptyMessage: "No accepted evidence found."
+      function showError(message) {
+        const element = document.getElementById("globalError");
+        element.textContent = message;
+        element.classList.remove("hidden");
+        document.getElementById("debugPanel").open = true;
+      }
+
+      function clearError() {
+        document.getElementById("globalError").classList.add("hidden");
+      }
+
+      function showSuccess(id, message) {
+        const element = document.getElementById(id);
+        element.textContent = message;
+        element.classList.remove("hidden");
+      }
+
+      function setTableState(tableId, emptyId, hasRows) {
+        document.getElementById(tableId).classList.toggle("hidden", !hasRows);
+        if (emptyId) document.getElementById(emptyId).classList.toggle("hidden", hasRows);
+      }
+
+      function activateWorkspace(target) {
+        activeWorkspace = target;
+        document.getElementById("ownerSection").classList.toggle("hidden", target !== "owner");
+        document.getElementById("analystSection").classList.toggle("hidden", target !== "analyst");
+        document.getElementById("managerSection").classList.toggle("hidden", target !== "manager");
+        document.querySelectorAll("[data-workspace-target]").forEach(button => button.classList.toggle("active", button.dataset.workspaceTarget === target));
+      }
+
+      function jsonOptions(value) {
+        return { body: JSON.stringify(value), headers: { "Content-Type": "application/json" } };
+      }
+
+      async function apiRequest(endpoint, { method = "GET", body, headers = {}, updateApiResponse = true, loading = "Processing..." } = {}) {
+        const panel = document.getElementById("apiResponse");
+        if (updateApiResponse) panel.textContent = loading;
+        try {
+          const response = await fetch(`${API_BASE}${endpoint}`, {
+            method,
+            headers: { "Authorization": "Bearer " + keycloak.token, ...headers },
+            body
+          });
+          const text = await response.text();
+          let data;
+          try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+          if (updateApiResponse) panel.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+          if (!response.ok) {
+            const message = data?.reason ? `${data.error || "Request denied"}: ${data.reason}` : data?.error || `HTTP ${response.status}`;
+            showError(message);
+          } else {
+            clearError();
           }
+          return { response, data };
+        } catch (error) {
+          if (updateApiResponse) panel.textContent = "Error: " + error.message;
+          showError(error.message);
+          return { response: null, data: null };
+        }
+      }
+
+      const tabLoaders = {
+        "owner:requests": () => loadOwnerRequests(false),
+        "owner:upload": () => loadOwnerRequests(false),
+        "owner:evidence": () => loadMyEvidence(false),
+        "owner:findings": () => loadOwnerFindings(false),
+        "analyst:audits": () => loadAnalystAudits(false),
+        "analyst:review": () => loadAnalystReview(false),
+        "analyst:requests": () => loadAnalystRequests(false),
+        "analyst:determinations": () => loadDeterminationDrafts(false),
+        "analyst:findings": () => loadAnalystFindings(false),
+        "analyst:accepted": () => loadAcceptedEvidence(false),
+        "manager:audits": () => loadManagerAudits(false),
+        "manager:requests": () => loadRequestApprovals(false),
+        "manager:acceptance": () => loadValidatedEvidence(false),
+        "manager:determinations": () => loadDeterminationApprovals(false),
+        "manager:findings": () => loadFindingApprovals(false),
+        "manager:oversight": () => loadOversight(false)
+      };
+      const workspaceDefaultLoaders = {
+        owner: () => loadOwnerRequests(false),
+        analyst: () => loadAnalystAudits(false),
+        manager: () => loadManagerAudits(false)
       };
 
-      function setActiveQueueTab(tabKey) {
-          document.querySelectorAll(".queue-tab").forEach(btn => {
-              btn.classList.toggle("active", btn.dataset.queueTab === tabKey);
-          });
+      function activateTab(group, target) {
+        document.querySelectorAll(`[data-tab-group="${group}"]`).forEach(button => button.classList.toggle("active", button.dataset.tabTarget === target));
+        document.querySelectorAll(`[data-panel-group="${group}"]`).forEach(panel => panel.classList.toggle("hidden", panel.dataset.panelTarget !== target));
+        tabLoaders[`${group}:${target}`]?.();
       }
 
-      function showQueueSuccess(message) {
-          const successEl = document.getElementById("queueSuccessMessage");
-          successEl.textContent = message;
-          successEl.classList.remove("hidden");
-      }
-
-      function hideQueueSuccess() {
-          document.getElementById("queueSuccessMessage").classList.add("hidden");
-      }
-
-      function renderEvidenceQueueRows(items) {
-          const tbody = document.getElementById("evidenceQueueBody");
-          tbody.innerHTML = "";
-
-          items.forEach(item => {
-              const actionCell = item.status === "VALIDATED"
-                  ? `<button type="button" class="accept-row-btn" data-evidence-id="${escapeHtml(item.id)}">Accept</button>`
-                  : "";
-
-              const row = document.createElement("tr");
-              row.innerHTML = `
-                  <td>${escapeHtml(item.id)}</td>
-                  <td>${escapeHtml(item.author)}</td>
-                  <td>${escapeHtml(item.filename)}</td>
-                  <td>${escapeHtml(item.date)}</td>
-                  <td>${escapeHtml(item.sensitivity)}</td>
-                  <td>${escapeHtml(item.region)}</td>
-                  <td>${escapeHtml(item.status)}</td>
-                  <td>${actionCell}</td>
-              `;
-              tbody.appendChild(row);
-          });
-
-          tbody.querySelectorAll(".accept-row-btn").forEach(btn => {
-              btn.addEventListener("click", () => acceptEvidence(btn.dataset.evidenceId, btn));
-          });
-      }
-
-      async function loadEvidenceQueue(tabKey, { updateApiResponse = true } = {}) {
-          const tab = QUEUE_TABS[tabKey];
-          if (!tab) return;
-
-          setActiveQueueTab(tabKey);
-
-          const container = document.getElementById("evidenceQueueContainer");
-          const emptyMsg = document.getElementById("evidenceQueueEmpty");
-          const table = document.getElementById("evidenceQueueTable");
-
-          if (updateApiResponse) {
-              document.getElementById("apiResponse").innerText = "Loading evidence queue...";
-          }
-
-          try {
-              const res = await fetch(`http://localhost:3050${tab.endpoint}`, {
-                  headers: { "Authorization": "Bearer " + keycloak.token }
-              });
-              const data = await res.json();
-
-              if (updateApiResponse) {
-                  document.getElementById("apiResponse").innerText = JSON.stringify(data, null, 2);
-              }
-
-              container.classList.remove("hidden");
-              emptyMsg.textContent = tab.emptyMessage;
-
-              if (!res.ok || !Array.isArray(data) || data.length === 0) {
-                  document.getElementById("evidenceQueueBody").innerHTML = "";
-                  table.classList.add("hidden");
-                  emptyMsg.classList.remove("hidden");
-                  return;
-              }
-
-              table.classList.remove("hidden");
-              emptyMsg.classList.add("hidden");
-              renderEvidenceQueueRows(data);
-          } catch (err) {
-              if (updateApiResponse) {
-                  document.getElementById("apiResponse").innerText = "Error: " + err.message;
-              }
-          }
-      }
-
-      async function acceptEvidence(evidenceId, buttonEl) {
-          hideQueueSuccess();
-          if (buttonEl) buttonEl.disabled = true;
-          document.getElementById("apiResponse").innerText = "Processing acceptance...";
-
-          try {
-              const res = await fetch(`http://localhost:3050/api/approve/report/${encodeURIComponent(evidenceId)}`, {
-                  method: "PATCH",
-                  headers: { "Authorization": "Bearer " + keycloak.token }
-              });
-              const data = await res.json();
-              document.getElementById("apiResponse").innerText = JSON.stringify(data, null, 2);
-
-              if (res.ok) {
-                  showQueueSuccess(`${evidenceId} accepted successfully.`);
-                  await loadEvidenceQueue("awaiting", { updateApiResponse: false });
-              } else if (buttonEl) {
-                  buttonEl.disabled = false;
-              }
-          } catch (err) {
-              document.getElementById("apiResponse").innerText = "Error: " + err.message;
-              if (buttonEl) buttonEl.disabled = false;
-          }
-      }
-
-      // --- Button Event Listeners ---
-      document.getElementById('logoutBtn').addEventListener('click', () => {
-          keycloak.logout({ redirectUri: window.location.origin + '/index.html' });
+      document.querySelectorAll("[data-tab-group]").forEach(button => {
+        button.addEventListener("click", () => activateTab(button.dataset.tabGroup, button.dataset.tabTarget));
       });
 
-      document.getElementById('uploadBtn').addEventListener('click', () => {
-          const fileInput = document.getElementById('reportFile');
-          if (fileInput.files.length === 0) return alert("Please select a file.");
+      async function loadOwnerRequests(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/evidence-requests/open", { updateApiResponse, loading: "Loading assigned requests..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const tbody = document.getElementById("ownerRequestsBody");
+        const select = document.getElementById("ownerRequestSelect");
+        tbody.innerHTML = "";
+        select.innerHTML = '<option value="">Select a request</option>';
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.requested_from)}</td><td>${escapeHtml(item.due_date)}</td><td>${escapeHtml(item.status)}</td>`;
+          tbody.appendChild(row);
+          const option = document.createElement("option");
+          option.value = item.id;
+          option.textContent = `${item.id} — ${item.title}`;
+          select.appendChild(option);
+        });
+        setTableState("ownerRequestsTable", "ownerRequestsEmpty", items.length > 0);
+      }
 
-          document.getElementById("apiResponse").innerText = "Uploading...";
-          const formData = new FormData();
-          formData.append('reportDoc', fileInput.files[0]);
+      async function loadMyEvidence(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/evidence/mine", { updateApiResponse, loading: "Loading your evidence..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const tbody = document.getElementById("myEvidenceBody");
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.evidence_request_id)}</td><td>${escapeHtml(item.filename)}</td><td>${escapeHtml(item.date)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.review_note)}</td>`;
+          tbody.appendChild(row);
+        });
+        setTableState("myEvidenceTable", "myEvidenceEmpty", items.length > 0);
+      }
 
-          fetch("http://localhost:3050/api/upload/report", {
-              method: 'POST',
-              headers: { "Authorization": "Bearer " + keycloak.token },
-              body: formData
-          })
-          .then(async res => {
-              const data = await res.json();
-              document.getElementById("apiResponse").innerText = JSON.stringify(data, null, 2);
-              fileInput.value = ""; 
-          })
-          .catch(err => document.getElementById("apiResponse").innerText = "Error: " + err.message);
-      });
+      async function loadOwnerFindings(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/findings/assigned", { updateApiResponse, loading: "Loading assigned findings..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const tbody = document.getElementById("ownerFindingsBody");
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const target = item.status === "OPEN" ? "REMEDIATION_IN_PROGRESS" : item.status === "REMEDIATION_IN_PROGRESS" ? "READY_FOR_RETEST" : null;
+          const action = target ? `<div class="inline-action"><input class="remediation-note" placeholder="Required remediation note"><button class="remediation-btn" data-finding-id="${escapeHtml(item.id)}" data-target-status="${target}">${target === "REMEDIATION_IN_PROGRESS" ? "Start Remediation" : "Ready for Retest"}</button></div>` : "";
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.condition)}</td><td>${escapeHtml(item.due_date)}</td><td>${escapeHtml(item.status)}</td><td>${action}</td>`;
+          tbody.appendChild(row);
+        });
+        tbody.querySelectorAll(".remediation-btn").forEach(button => button.addEventListener("click", () => {
+          const note = button.closest("tr").querySelector(".remediation-note").value;
+          updateRemediation(button.dataset.findingId, button.dataset.targetStatus, note, button);
+        }));
+        setTableState("ownerFindingsTable", "ownerFindingsEmpty", items.length > 0);
+      }
 
-      document.querySelectorAll('.queue-tab').forEach(btn => {
-          btn.addEventListener('click', () => {
-              hideQueueSuccess();
-              loadEvidenceQueue(btn.dataset.queueTab, { updateApiResponse: true });
-          });
-      });
+      async function updateRemediation(findingId, status, note, button) {
+        button.disabled = true;
+        const { response, data } = await apiRequest(`/api/findings/${encodeURIComponent(findingId)}/remediation`, {
+          method: "PATCH", ...jsonOptions({ status, remediation_note: note }), loading: "Updating remediation..."
+        });
+        if (response?.ok) {
+          showSuccess("ownerSuccess", data.message);
+          await loadOwnerFindings(false);
+        } else button.disabled = false;
+      }
 
-      // Approve Button (Reads the text box and uses PATCH)
-      document.getElementById('approveBtn').addEventListener('click', () => {
-          const reportId = document.getElementById('reportID').value.trim();
-          if (!reportId) {
-              alert("Please enter an Evidence ID.");
-              return;
+      function renderAuditRows(tbodyId, items, mode) {
+        const tbody = document.getElementById(tbodyId);
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          if (mode === "analyst") {
+            row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.owner)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.determination_draft)}</td><td>${escapeHtml(item.determination)}</td>`;
+          } else {
+            row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.owner)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.created_by)}</td>`;
           }
-          fetchAPI(`/api/approve/report/${reportId}`, 'PATCH');
+          tbody.appendChild(row);
+        });
+      }
+
+      async function loadAnalystAudits(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/audit-items", { updateApiResponse, loading: "Loading audit items..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        renderAuditRows("analystAuditsBody", items, "analyst");
+        setTableState("analystAuditsTable", "analystAuditsEmpty", items.length > 0);
+      }
+
+      async function loadAnalystReview(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/pending/report", { updateApiResponse, loading: "Loading submitted evidence..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const tbody = document.getElementById("analystReviewBody");
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.evidence_request_id)}</td><td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.filename)}</td><td>${escapeHtml(item.author)}</td><td>${escapeHtml(item.submitted_note)}</td><td>${escapeHtml(item.sensitivity)}</td><td>${escapeHtml(item.region)}</td><td><input class="review-note" placeholder="Optional review note"></td><td><button class="validate-btn" data-evidence-id="${escapeHtml(item.id)}">Validate</button></td>`;
+          tbody.appendChild(row);
+        });
+        tbody.querySelectorAll(".validate-btn").forEach(button => button.addEventListener("click", () => {
+          const note = button.closest("tr").querySelector(".review-note").value;
+          validateEvidence(button.dataset.evidenceId, note, button);
+        }));
+        setTableState("analystReviewTable", "analystReviewEmpty", items.length > 0);
+      }
+
+      async function validateEvidence(evidenceId, reviewNote, button) {
+        button.disabled = true;
+        const { response, data } = await apiRequest(`/api/analyst/validate/${encodeURIComponent(evidenceId)}`, {
+          method: "PATCH", ...jsonOptions({ review_note: reviewNote }), loading: "Validating evidence..."
+        });
+        if (response?.ok) {
+          showSuccess("analystSuccess", data.message);
+          await loadAnalystReview(false);
+        } else button.disabled = false;
+      }
+
+      async function loadAnalystRequests(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/evidence-requests", { updateApiResponse, loading: "Loading evidence requests..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const tbody = document.getElementById("analystRequestsBody");
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.assigned_to)}</td><td>${escapeHtml(item.due_date)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.drafted_by)}</td>`;
+          tbody.appendChild(row);
+        });
+      }
+
+      async function loadDeterminationDrafts(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/audit-items", { updateApiResponse, loading: "Loading determination drafts..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const tbody = document.getElementById("determinationDraftsBody");
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.determination_draft)}</td><td>${escapeHtml(item.determination_draft_rationale)}</td><td>${escapeHtml(item.determination_drafted_by)}</td><td>${escapeHtml(item.determination)}</td>`;
+          tbody.appendChild(row);
+        });
+      }
+
+      async function loadAnalystFindings(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/findings", { updateApiResponse, loading: "Loading findings..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const drafts = items.filter(item => item.status === "DRAFT");
+        const approved = items.filter(item => item.status !== "DRAFT");
+        const draftBody = document.getElementById("analystDraftFindingsBody");
+        const approvedBody = document.getElementById("analystApprovedFindingsBody");
+        draftBody.innerHTML = "";
+        approvedBody.innerHTML = "";
+        drafts.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.condition)}</td><td>${escapeHtml(item.owner)}</td><td>${escapeHtml(item.due_date)}</td><td>${escapeHtml(item.drafted_by)}</td>`;
+          draftBody.appendChild(row);
+        });
+        approved.forEach(item => {
+          const action = item.status === "READY_FOR_RETEST" ? `<div class="inline-action"><input class="retest-note" placeholder="Required retest note"><button class="retest-btn" data-finding-id="${escapeHtml(item.id)}">Close After Retest</button></div>` : "";
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.condition)}</td><td>${escapeHtml(item.owner)}</td><td>${escapeHtml(item.status)}</td><td>${action}</td>`;
+          approvedBody.appendChild(row);
+        });
+        approvedBody.querySelectorAll(".retest-btn").forEach(button => button.addEventListener("click", () => {
+          const note = button.closest("tr").querySelector(".retest-note").value;
+          retestFinding(button.dataset.findingId, note, button);
+        }));
+      }
+
+      async function retestFinding(findingId, note, button) {
+        button.disabled = true;
+        const { response, data } = await apiRequest(`/api/findings/${encodeURIComponent(findingId)}/retest`, {
+          method: "PATCH", ...jsonOptions({ retest_note: note }), loading: "Recording retest..."
+        });
+        if (response?.ok) {
+          showSuccess("analystSuccess", data.message);
+          await loadAnalystFindings(false);
+        } else button.disabled = false;
+      }
+
+      async function loadAcceptedEvidence(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/view/report", { updateApiResponse, loading: "Loading accepted evidence..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const tbody = document.getElementById("acceptedEvidenceBody");
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.evidence_request_id)}</td><td>${escapeHtml(item.filename)}</td><td>${escapeHtml(item.author)}</td><td>${escapeHtml(item.accepted_by)}</td><td>${escapeHtml(item.accepted_date)}</td>`;
+          tbody.appendChild(row);
+        });
+        setTableState("acceptedEvidenceTable", "acceptedEvidenceEmpty", items.length > 0);
+      }
+
+      async function loadManagerAudits(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/audit-items", { updateApiResponse, loading: "Loading audit items..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        renderAuditRows("managerAuditsBody", items, "manager");
+      }
+
+      async function loadRequestApprovals(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/evidence-requests/drafts", { updateApiResponse, loading: "Loading request drafts..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const tbody = document.getElementById("requestApprovalsBody");
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.assigned_to)}</td><td>${escapeHtml(item.due_date)}</td><td>${escapeHtml(item.drafted_by)}</td><td><button class="approve-btn issue-request-btn" data-request-id="${escapeHtml(item.id)}">Issue Request</button></td>`;
+          tbody.appendChild(row);
+        });
+        tbody.querySelectorAll(".issue-request-btn").forEach(button => button.addEventListener("click", () => issueRequest(button.dataset.requestId, button)));
+        setTableState("requestApprovalsTable", "requestApprovalsEmpty", items.length > 0);
+      }
+
+      async function issueRequest(requestId, button) {
+        button.disabled = true;
+        const { response, data } = await apiRequest(`/api/evidence-requests/${encodeURIComponent(requestId)}/issue`, { method: "PATCH", loading: "Issuing evidence request..." });
+        if (response?.ok) {
+          showSuccess("managerSuccess", data.message);
+          await loadRequestApprovals(false);
+        } else button.disabled = false;
+      }
+
+      async function loadValidatedEvidence(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/verified/report", { updateApiResponse, loading: "Loading validated evidence..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const tbody = document.getElementById("validatedEvidenceBody");
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.evidence_request_id)}</td><td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.filename)}</td><td>${escapeHtml(item.author)}</td><td>${escapeHtml(item.validated_by)}</td><td>${escapeHtml(item.review_note)}</td><td><button class="accept-btn" data-evidence-id="${escapeHtml(item.id)}">Accept</button></td>`;
+          tbody.appendChild(row);
+        });
+        tbody.querySelectorAll(".accept-btn").forEach(button => button.addEventListener("click", () => acceptEvidence(button.dataset.evidenceId, button)));
+        setTableState("validatedEvidenceTable", "validatedEvidenceEmpty", items.length > 0);
+      }
+
+      async function acceptEvidence(evidenceId, button) {
+        button.disabled = true;
+        const { response, data } = await apiRequest(`/api/approve/report/${encodeURIComponent(evidenceId)}`, { method: "PATCH", loading: "Accepting evidence..." });
+        if (response?.ok) {
+          showSuccess("managerSuccess", data.message);
+          await loadValidatedEvidence(false);
+        } else button.disabled = false;
+      }
+
+      async function loadDeterminationApprovals(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/audit-items", { updateApiResponse, loading: "Loading determination drafts..." });
+        const items = response?.ok && Array.isArray(data) ? data.filter(item => item.status !== "CONCLUDED" && item.determination_draft) : [];
+        const tbody = document.getElementById("determinationApprovalsBody");
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.determination_draft)}</td><td>${escapeHtml(item.determination_draft_rationale)}</td><td>${escapeHtml(item.determination_drafted_by)}</td><td>${escapeHtml(item.created_by)}</td><td><button class="use-draft-btn" data-audit-id="${escapeHtml(item.id)}" data-determination="${escapeHtml(item.determination_draft)}" data-rationale="${escapeHtml(item.determination_draft_rationale)}">Use Draft</button></td>`;
+          tbody.appendChild(row);
+        });
+        tbody.querySelectorAll(".use-draft-btn").forEach(button => button.addEventListener("click", () => {
+          document.getElementById("concludeAuditId").value = button.dataset.auditId;
+          document.getElementById("finalDetermination").value = button.dataset.determination;
+          document.getElementById("finalRationale").value = button.dataset.rationale;
+        }));
+      }
+
+      async function loadFindingApprovals(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/findings", { updateApiResponse, loading: "Loading finding approvals..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const drafts = items.filter(item => item.status === "DRAFT");
+        const lifecycle = items.filter(item => item.status !== "DRAFT");
+        const approvalBody = document.getElementById("findingApprovalsBody");
+        const oversightBody = document.getElementById("findingOversightBody");
+        approvalBody.innerHTML = "";
+        oversightBody.innerHTML = "";
+        drafts.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.condition)}</td><td>${escapeHtml(item.owner)}</td><td>${escapeHtml(item.assigned_to)}</td><td>${escapeHtml(item.drafted_by)}</td><td><button class="approve-btn approve-finding-btn" data-finding-id="${escapeHtml(item.id)}">Approve Finding</button></td>`;
+          approvalBody.appendChild(row);
+        });
+        lifecycle.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.audit_item_id)}</td><td>${escapeHtml(item.owner)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.remediated_by)}</td><td>${escapeHtml(item.retested_by)}</td>`;
+          oversightBody.appendChild(row);
+        });
+        approvalBody.querySelectorAll(".approve-finding-btn").forEach(button => button.addEventListener("click", () => approveFinding(button.dataset.findingId, button)));
+        setTableState("findingApprovalsTable", "findingApprovalsEmpty", drafts.length > 0);
+      }
+
+      async function approveFinding(findingId, button) {
+        button.disabled = true;
+        const { response, data } = await apiRequest(`/api/findings/${encodeURIComponent(findingId)}/approve`, { method: "PATCH", loading: "Approving finding..." });
+        if (response?.ok) {
+          showSuccess("managerSuccess", data.message);
+          await loadFindingApprovals(false);
+        } else button.disabled = false;
+      }
+
+      async function loadOversight(updateApiResponse = true) {
+        const { response, data } = await apiRequest("/api/audit-items", { updateApiResponse, loading: "Loading audit oversight..." });
+        const items = response?.ok && Array.isArray(data) ? data : [];
+        const tbody = document.getElementById("oversightBody");
+        tbody.innerHTML = "";
+        items.forEach(item => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.owner)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.determination_draft)}</td><td>${escapeHtml(item.determination)}</td><td><button class="view-details-btn" data-audit-id="${escapeHtml(item.id)}">View Aggregate</button></td>`;
+          tbody.appendChild(row);
+        });
+        tbody.querySelectorAll(".view-details-btn").forEach(button => button.addEventListener("click", () => apiRequest(`/api/audit-items/${encodeURIComponent(button.dataset.auditId)}`, { loading: "Loading aggregate audit detail..." })));
+      }
+
+      document.getElementById("logoutBtn").addEventListener("click", () => keycloak.logout({ redirectUri: window.location.origin + "/index.html" }));
+      document.getElementById("refreshOwnerRequestsBtn").addEventListener("click", () => loadOwnerRequests());
+      document.getElementById("refreshMyEvidenceBtn").addEventListener("click", () => loadMyEvidence());
+      document.getElementById("refreshAssignedFindingsBtn").addEventListener("click", () => loadOwnerFindings());
+      document.getElementById("refreshAnalystAuditsBtn").addEventListener("click", () => loadAnalystAudits());
+      document.getElementById("refreshAnalystReviewBtn").addEventListener("click", () => loadAnalystReview());
+      document.getElementById("refreshAnalystRequestsBtn").addEventListener("click", () => loadAnalystRequests());
+      document.getElementById("refreshDeterminationDraftsBtn").addEventListener("click", () => loadDeterminationDrafts());
+      document.getElementById("refreshAnalystFindingsBtn").addEventListener("click", () => loadAnalystFindings());
+      document.getElementById("refreshAcceptedEvidenceBtn").addEventListener("click", () => loadAcceptedEvidence());
+      document.getElementById("refreshManagerAuditsBtn").addEventListener("click", () => loadManagerAudits());
+      document.getElementById("refreshRequestApprovalsBtn").addEventListener("click", () => loadRequestApprovals());
+      document.getElementById("refreshValidatedEvidenceBtn").addEventListener("click", () => loadValidatedEvidence());
+      document.getElementById("refreshDeterminationApprovalsBtn").addEventListener("click", () => loadDeterminationApprovals());
+      document.getElementById("refreshFindingApprovalsBtn").addEventListener("click", () => loadFindingApprovals());
+      document.getElementById("refreshOversightBtn").addEventListener("click", () => loadOversight());
+
+      document.getElementById("uploadEvidenceForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const button = document.getElementById("uploadBtn");
+        button.disabled = true;
+        const { response, data } = await apiRequest("/api/upload/report", { method: "POST", body: new FormData(form), loading: "Uploading evidence..." });
+        button.disabled = false;
+        if (response?.ok) {
+          showSuccess("ownerSuccess", data.message);
+          form.reset();
+          await loadOwnerRequests(false);
+          await loadMyEvidence(false);
+        }
       });
+
+      document.getElementById("draftEvidenceRequestForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        const auditId = payload.audit_item_id;
+        delete payload.audit_item_id;
+        const { response, data } = await apiRequest(`/api/audit-items/${encodeURIComponent(auditId)}/evidence-request-drafts`, { method: "POST", ...jsonOptions(payload), loading: "Saving request draft..." });
+        if (response?.ok) {
+          showSuccess("analystSuccess", data.message);
+          form.reset();
+          await loadAnalystRequests(false);
+        }
+      });
+
+      document.getElementById("draftDeterminationForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        const auditId = payload.audit_item_id;
+        delete payload.audit_item_id;
+        const { response, data } = await apiRequest(`/api/audit-items/${encodeURIComponent(auditId)}/determination-draft`, { method: "PATCH", ...jsonOptions(payload), loading: "Saving determination draft..." });
+        if (response?.ok) {
+          showSuccess("analystSuccess", data.message);
+          form.reset();
+          await loadDeterminationDrafts(false);
+        }
+      });
+
+      document.getElementById("draftFindingForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        const auditId = payload.audit_item_id;
+        delete payload.audit_item_id;
+        const { response, data } = await apiRequest(`/api/audit-items/${encodeURIComponent(auditId)}/finding-drafts`, { method: "POST", ...jsonOptions(payload), loading: "Saving finding draft..." });
+        if (response?.ok) {
+          showSuccess("analystSuccess", data.message);
+          form.reset();
+          await loadAnalystFindings(false);
+        }
+      });
+
+      document.getElementById("createAuditForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        const { response, data } = await apiRequest("/api/audit-items", { method: "POST", ...jsonOptions(payload), loading: "Creating audit item..." });
+        if (response?.ok) {
+          showSuccess("managerSuccess", data.message);
+          form.reset();
+          await loadManagerAudits(false);
+        }
+      });
+
+      document.getElementById("concludeAuditForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const payload = Object.fromEntries(new FormData(form).entries());
+        const auditId = payload.audit_item_id;
+        delete payload.audit_item_id;
+        const { response, data } = await apiRequest(`/api/audit-items/${encodeURIComponent(auditId)}/conclude`, { method: "PATCH", ...jsonOptions(payload), loading: "Concluding audit item..." });
+        if (response?.ok) {
+          showSuccess("managerSuccess", data.message);
+          form.reset();
+          await loadDeterminationApprovals(false);
+        }
+      });
+
+      workspaceDefaultLoaders[activeWorkspace]?.();
     </script>
 </body>
 </html>
