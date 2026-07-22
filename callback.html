@@ -28,8 +28,8 @@
       
       const keycloak = new Keycloak({
         url: 'http://192.168.30.10:8080', 
-        realm: 'secure-finance',             
-        clientId: 'finance-portal-spa'             
+        realm: 'cyber-audit-portal',
+        clientId: 'cyber-audit-portal-spa'
       });
 
       try {
@@ -37,7 +37,7 @@
         const authenticated = await keycloak.init({ 
             onLoad: 'check-sso',
             checkLoginIframe: false,
-            scope: 'openid profile email finance-abac-claims' 
+            scope: 'openid profile email audit-context-claims'
         });
 
         if (authenticated) {

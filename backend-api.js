@@ -194,7 +194,7 @@ let evidenceItems = [
         audit_item_id: "AUD-001",
         evidence_request_id: "ERQ-005",
         description: "Approved proxy exception register.",
-        submitted_note: "Current exception register for analyst review.",
+        submitted_note: "Current exception register for audit analyst review.",
         author: "alice",
         filename: "proxy-exceptions.txt",
         date: "2026-07-05T10:10:00.000Z",
@@ -305,11 +305,11 @@ function getRequestSource(req) {
 }
 
 function isFrontendRequest(req) {
-  return getRequestSource(req) === "finance-portal-spa";
+  return getRequestSource(req) === "cyber-audit-portal-spa";
 }
 
 function isVerifierServiceRequest(req) {
-  return getRequestSource(req) === "report-verifier-client";
+  return getRequestSource(req) === "audit-validator-client";
 }
 
 function hasMfa(req) {
@@ -336,8 +336,8 @@ function nextId(collection, prefix) {
 }
 
 function isManagerWorkflowRequestAllowed(req, res, { requireMfa = false } = {}) {
-  if (req.user.department !== "finance") {
-    denyAbac(res, "Only authorized GRC Lab finance managers can perform this action.");
+  if (req.user.department !== "cybersecurity-audit") {
+    denyAbac(res, "Only authorized GRC Lab audit managers can perform this action.");
     return false;
   }
 
@@ -354,7 +354,7 @@ function isManagerWorkflowRequestAllowed(req, res, { requireMfa = false } = {}) 
   return true;
 }
 
-function isAnalystWorkflowRequestAllowed(req, res) {
+function isAuditAnalystWorkflowRequestAllowed(req, res) {
   if (!isFrontendRequest(req)) {
     denyAbac(res, "Analyst workflow actions must come from the audit dashboard.");
     return false;
@@ -363,7 +363,7 @@ function isAnalystWorkflowRequestAllowed(req, res) {
 }
 
 function isControlOwnerWorkflowRequestAllowed(req, res) {
-  if (req.user.department !== "finance") {
+  if (req.user.department !== "cybersecurity-audit") {
     denyAbac(res, "Only authorized GRC Lab control owners can perform this action.");
     return false;
   }
@@ -426,10 +426,10 @@ function hasRequiredAudience(req) {
   const aud = req.user.aud;
 
   if (Array.isArray(aud)) {
-    return aud.includes("financial-reporting-api");
+    return aud.includes("cyber-audit-api");
   }
 
-  return aud === "financial-reporting-api";
+  return aud === "cyber-audit-api";
 }
 
 function requireApiAudience(req, res, next) {
@@ -445,14 +445,14 @@ function requireApiAudience(req, res, next) {
 
 
 // --- Token Introspection for High-Risk Endpoints ---
-const KEYCLOAK_INTROSPECTION_URL = "http://192.168.30.10:8080/realms/secure-finance/protocol/openid-connect/token/introspect";
-const INTROSPECTION_CLIENT_ID = "report-verifier-client";
+const KEYCLOAK_INTROSPECTION_URL = "http://192.168.30.10:8080/realms/cyber-audit-portal/protocol/openid-connect/token/introspect";
+const INTROSPECTION_CLIENT_ID = "audit-validator-client";
 
 async function introspectAccessToken(token) {
-  const clientSecret = process.env.REPORT_VERIFIER_CLIENT_SECRET;
+  const clientSecret = process.env.AUDIT_VALIDATOR_CLIENT_SECRET;
 
   if (!clientSecret) {
-    throw new Error("Missing REPORT_VERIFIER_CLIENT_SECRET environment variable.");
+    throw new Error("Missing AUDIT_VALIDATOR_CLIENT_SECRET environment variable.");
   }
 
   const body = new URLSearchParams();
@@ -499,8 +499,8 @@ async function requireActiveToken(req, res, next) {
 
 // --- Simple Risk-Based Access Control for Acceptance Endpoint ---
 const KEYCLOAK_ADMIN_TOKEN_URL = "http://192.168.30.10:8080/realms/master/protocol/openid-connect/token";
-const KEYCLOAK_ADMIN_USERS_URL = "http://192.168.30.10:8080/admin/realms/secure-finance/users";
-const KEYCLOAK_EVENTS_URL = "http://192.168.30.10:8080/admin/realms/secure-finance/events";
+const KEYCLOAK_ADMIN_USERS_URL = "http://192.168.30.10:8080/admin/realms/cyber-audit-portal/users";
+const KEYCLOAK_EVENTS_URL = "http://192.168.30.10:8080/admin/realms/cyber-audit-portal/events";
 const RISK_DENY_THRESHOLD = 70;
 const RISK_EVENT_WINDOW_MS = 10 * 60 * 1000; // last 10 minutes
 
@@ -623,11 +623,11 @@ app.get('/api/public', (req, res) => {
 });
 
 // Audit Item Endpoints
-app.get('/api/audit-items', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+app.get('/api/audit-items', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager', 'audit-analyst']), (req, res) => {
   res.json(auditItems);
 });
 
-app.get('/api/audit-items/:auditItemID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+app.get('/api/audit-items/:auditItemID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager']), (req, res) => {
   if (!isManagerWorkflowRequestAllowed(req, res)) return;
 
   const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
@@ -645,7 +645,7 @@ app.get('/api/audit-items/:auditItemID', verifyToken, requireApiAudience, requir
   });
 });
 
-app.post('/api/audit-items', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+app.post('/api/audit-items', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager']), (req, res) => {
   if (!isManagerWorkflowRequestAllowed(req, res)) return;
 
   const { criterion_id, title, description, owner } = req.body || {};
@@ -680,7 +680,7 @@ app.post('/api/audit-items', verifyToken, requireApiAudience, requireActiveToken
   });
 });
 
-app.patch('/api/audit-items/:auditItemID/conclude', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+app.patch('/api/audit-items/:auditItemID/conclude', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager']), (req, res) => {
   if (!isManagerWorkflowRequestAllowed(req, res, { requireMfa: true })) return;
 
   const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
@@ -692,7 +692,7 @@ app.patch('/api/audit-items/:auditItemID/conclude', verifyToken, requireApiAudie
     return denyAbac(res, "A manager cannot conclude an audit item they created. Independent manager review is required.");
   }
   if (!auditItem.determination_draft || !auditItem.determination_draft_rationale) {
-    return res.status(409).json({ error: "An analyst determination draft is required before manager conclusion." });
+    return res.status(409).json({ error: "An audit analyst determination draft is required before manager conclusion." });
   }
   if (auditItem.determination_drafted_by === req.user.preferred_username) {
     return denyAbac(res, "The determination drafter cannot finalize the same audit item.");
@@ -743,8 +743,8 @@ app.patch('/api/audit-items/:auditItemID/conclude', verifyToken, requireApiAudie
   });
 });
 
-app.patch('/api/audit-items/:auditItemID/determination-draft', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), (req, res) => {
-  if (!isAnalystWorkflowRequestAllowed(req, res)) return;
+app.patch('/api/audit-items/:auditItemID/determination-draft', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-analyst']), (req, res) => {
+  if (!isAuditAnalystWorkflowRequestAllowed(req, res)) return;
 
   const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
   if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
@@ -771,26 +771,26 @@ app.patch('/api/audit-items/:auditItemID/determination-draft', verifyToken, requ
 });
 
 // Evidence Request Endpoints
-// Compatibility route retained, but it now follows the analyst DRAFT workflow.
-app.post('/api/audit-items/:auditItemID/evidence-requests', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), createEvidenceRequestDraft);
+// Compatibility route retained, but it now follows the audit analyst DRAFT workflow.
+app.post('/api/audit-items/:auditItemID/evidence-requests', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-analyst']), createEvidenceRequestDraft);
 
-app.get('/api/audit-items/:auditItemID/evidence-requests', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+app.get('/api/audit-items/:auditItemID/evidence-requests', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager', 'audit-analyst']), (req, res) => {
   const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
   if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
 
   res.json(evidenceRequests.filter(item => item.audit_item_id === auditItem.id));
 });
 
-app.get('/api/evidence-requests', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+app.get('/api/evidence-requests', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager', 'audit-analyst']), (req, res) => {
   res.json(evidenceRequests.map(enrichEvidenceRequest));
 });
 
-app.get('/api/evidence-requests/drafts', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+app.get('/api/evidence-requests/drafts', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager', 'audit-analyst']), (req, res) => {
   res.json(evidenceRequests.filter(item => item.status === "DRAFT").map(enrichEvidenceRequest));
 });
 
 function createEvidenceRequestDraft(req, res) {
-  if (!isAnalystWorkflowRequestAllowed(req, res)) return;
+  if (!isAuditAnalystWorkflowRequestAllowed(req, res)) return;
 
   const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
   if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
@@ -829,9 +829,9 @@ function createEvidenceRequestDraft(req, res) {
   });
 }
 
-app.post('/api/audit-items/:auditItemID/evidence-request-drafts', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), createEvidenceRequestDraft);
+app.post('/api/audit-items/:auditItemID/evidence-request-drafts', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-analyst']), createEvidenceRequestDraft);
 
-app.patch('/api/evidence-requests/:evidenceRequestID/issue', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+app.patch('/api/evidence-requests/:evidenceRequestID/issue', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager']), (req, res) => {
   if (!isManagerWorkflowRequestAllowed(req, res)) return;
 
   const evidenceRequest = evidenceRequests.find(item => item.id === req.params.evidenceRequestID);
@@ -861,7 +861,7 @@ app.patch('/api/evidence-requests/:evidenceRequestID/issue', verifyToken, requir
   });
 });
 
-app.get('/api/evidence-requests/open', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['accountant']), (req, res) => {
+app.get('/api/evidence-requests/open', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['control-owner']), (req, res) => {
   if (!isControlOwnerWorkflowRequestAllowed(req, res)) return;
 
   const assignedRequests = evidenceRequests
@@ -871,7 +871,7 @@ app.get('/api/evidence-requests/open', verifyToken, requireApiAudience, requireA
   res.json(assignedRequests);
 });
 
-app.patch('/api/evidence-requests/:evidenceRequestID/close', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+app.patch('/api/evidence-requests/:evidenceRequestID/close', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager']), (req, res) => {
   if (!isManagerWorkflowRequestAllowed(req, res)) return;
 
   const evidenceRequest = evidenceRequests.find(item => item.id === req.params.evidenceRequestID);
@@ -889,18 +889,18 @@ app.patch('/api/evidence-requests/:evidenceRequestID/close', verifyToken, requir
 });
 
 // Finding Endpoints
-app.get('/api/findings', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+app.get('/api/findings', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager', 'audit-analyst']), (req, res) => {
   res.json(findings);
 });
 
-app.get('/api/audit-items/:auditItemID/findings', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+app.get('/api/audit-items/:auditItemID/findings', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager', 'audit-analyst']), (req, res) => {
   const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
   if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
   res.json(findings.filter(item => item.audit_item_id === auditItem.id));
 });
 
 function createFindingDraft(req, res) {
-  if (!isAnalystWorkflowRequestAllowed(req, res)) return;
+  if (!isAuditAnalystWorkflowRequestAllowed(req, res)) return;
   const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
   if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
   if (auditItem.status === "CONCLUDED") {
@@ -946,12 +946,12 @@ function createFindingDraft(req, res) {
   });
 }
 
-app.post('/api/audit-items/:auditItemID/finding-drafts', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), createFindingDraft);
+app.post('/api/audit-items/:auditItemID/finding-drafts', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-analyst']), createFindingDraft);
 
-// Compatibility alias: finding creation now follows the analyst DRAFT workflow.
-app.post('/api/audit-items/:auditItemID/findings', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), createFindingDraft);
+// Compatibility alias: finding creation now follows the audit analyst DRAFT workflow.
+app.post('/api/audit-items/:auditItemID/findings', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-analyst']), createFindingDraft);
 
-app.patch('/api/findings/:findingID/approve', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+app.patch('/api/findings/:findingID/approve', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager']), (req, res) => {
   if (!isManagerWorkflowRequestAllowed(req, res)) return;
 
   const finding = findings.find(item => item.id === req.params.findingID);
@@ -973,14 +973,14 @@ app.patch('/api/findings/:findingID/approve', verifyToken, requireApiAudience, r
   });
 });
 
-app.get('/api/findings/assigned', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['accountant']), (req, res) => {
+app.get('/api/findings/assigned', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['control-owner']), (req, res) => {
   if (!isControlOwnerWorkflowRequestAllowed(req, res)) return;
   res.json(findings.filter(item =>
     item.status !== "DRAFT" && item.assigned_to === req.user.preferred_username
   ));
 });
 
-app.patch('/api/findings/:findingID/remediation', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['accountant']), (req, res) => {
+app.patch('/api/findings/:findingID/remediation', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['control-owner']), (req, res) => {
   if (!isControlOwnerWorkflowRequestAllowed(req, res)) return;
 
   const finding = findings.find(item => item.id === req.params.findingID);
@@ -1015,8 +1015,8 @@ app.patch('/api/findings/:findingID/remediation', verifyToken, requireApiAudienc
   });
 });
 
-app.patch('/api/findings/:findingID/retest', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), (req, res) => {
-  if (!isAnalystWorkflowRequestAllowed(req, res)) return;
+app.patch('/api/findings/:findingID/retest', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-analyst']), (req, res) => {
+  if (!isAuditAnalystWorkflowRequestAllowed(req, res)) return;
 
   const finding = findings.find(item => item.id === req.params.findingID);
   if (!finding) return res.status(404).json({ error: "Finding not found." });
@@ -1024,7 +1024,7 @@ app.patch('/api/findings/:findingID/retest', verifyToken, requireApiAudience, re
     return res.status(409).json({ error: "Only READY_FOR_RETEST findings may be closed after retest." });
   }
   if (finding.remediated_by === req.user.preferred_username) {
-    return denyAbac(res, "The remediation owner cannot perform the independent analyst retest.");
+    return denyAbac(res, "The remediation owner cannot perform the independent audit analyst retest.");
   }
 
   const retestNote = typeof req.body?.retest_note === "string" ? req.body.retest_note.trim() : "";
@@ -1036,12 +1036,12 @@ app.patch('/api/findings/:findingID/retest', verifyToken, requireApiAudience, re
   finding.retested_date = new Date().toISOString();
 
   res.json({
-    message: `Finding ${finding.id} closed after analyst retest.`,
+    message: `Finding ${finding.id} closed after audit analyst retest.`,
     finding: finding
   });
 });
 
-app.patch('/api/findings/:findingID/status', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+app.patch('/api/findings/:findingID/status', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager']), (req, res) => {
   if (!isManagerWorkflowRequestAllowed(req, res)) return;
 
   const finding = findings.find(item => item.id === req.params.findingID);
@@ -1057,7 +1057,7 @@ app.patch('/api/findings/:findingID/status', verifyToken, requireApiAudience, re
     return res.status(409).json({ error: "DRAFT findings must use the approval workflow and cannot be manager-overridden." });
   }
   if (status === "CLOSED") {
-    return res.status(409).json({ error: "Only an analyst may close a finding through the retest workflow." });
+    return res.status(409).json({ error: "Only an audit analyst may close a finding through the retest workflow." });
   }
 
   const previousStatus = finding.status;
@@ -1077,7 +1077,7 @@ app.patch('/api/findings/:findingID/status', verifyToken, requireApiAudience, re
 });
 
 // Upload Endpoint (Status becomes SUBMITTED)
-app.post('/api/upload/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['accountant']), upload.single('reportDoc'), (req, res) => {
+app.post('/api/upload/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['control-owner']), upload.single('reportDoc'), (req, res) => {
   const requestSource = getRequestSource(req);
 
   if (!isControlOwnerWorkflowRequestAllowed(req, res)) {
@@ -1164,7 +1164,7 @@ app.post('/api/upload/report', verifyToken, requireApiAudience, requireActiveTok
   });
 });
 
-app.get('/api/evidence/mine', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['accountant']), (req, res) => {
+app.get('/api/evidence/mine', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['control-owner']), (req, res) => {
   if (!isControlOwnerWorkflowRequestAllowed(req, res)) return;
   const ownEvidence = evidenceItems
     .filter(item => item.author === req.user.preferred_username && (!item.region || item.region === req.user.region))
@@ -1173,7 +1173,7 @@ app.get('/api/evidence/mine', verifyToken, requireApiAudience, requireActiveToke
 });
 
 // View ACCEPTED Evidence
-app.get('/api/view/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+app.get('/api/view/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager', 'audit-analyst']), (req, res) => {
     if (!isFrontendRequest(req)) {
         return denyAbac(res, "Accepted evidence must be viewed through the audit dashboard.");
     }
@@ -1187,8 +1187,8 @@ app.get('/api/view/report', verifyToken, requireApiAudience, requireActiveToken,
 });
 
 // View VALIDATED Evidence
-app.get('/api/verified/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
-    if (req.user.department !== "finance") {
+app.get('/api/verified/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager']), (req, res) => {
+    if (req.user.department !== "cybersecurity-audit") {
         return denyAbac(res, "Only authorized GRC Lab team members can view validated audit evidence.");
     }
 
@@ -1206,21 +1206,21 @@ app.get('/api/verified/report', verifyToken, requireApiAudience, requireActiveTo
 });
 
 // View SUBMITTED Evidence
-app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst', 'system-auditor']), (req, res) => {
+app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-analyst', 'automated-validator']), (req, res) => {
     const roles = req.user.realm_access?.roles || [];
 
     // Machine/service path: automated validator
-    if (roles.includes('system-auditor')) {
+    if (roles.includes('automated-validator')) {
         if (!isVerifierServiceRequest(req)) {
-            return denyAbac(res, "System-auditor access must come from the automated audit verifier service.");
+            return denyAbac(res, "Automated-validator access must come from the automated audit validator service.");
         }
 
         const submitted = evidenceItems.filter(r => r.status === "SUBMITTED").map(enrichEvidence);
         return res.json(submitted);
     }
 
-    // Human path: analyst
-    if (roles.includes('analyst')) {
+    // Human path: audit analyst
+    if (roles.includes('audit-analyst')) {
         if (!isFrontendRequest(req)) {
             return denyAbac(res, "Analyst submitted evidence access must come from the audit dashboard.");
         }
@@ -1238,8 +1238,8 @@ app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveTok
 });
 
 // View ALL Evidence
-app.get('/api/all/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
-    if (req.user.department !== "finance") {
+app.get('/api/all/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager']), (req, res) => {
+    if (req.user.department !== "cybersecurity-audit") {
         return denyAbac(res, "Only authorized GRC Lab team members can view all audit evidence.");
     }
 
@@ -1256,7 +1256,7 @@ app.get('/api/all/report', verifyToken, requireApiAudience, requireActiveToken, 
 });
 
 // Manager Acceptance Endpoint (Status VALIDATED -> ACCEPTED)
-app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), async (req, res) => {
+app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-manager']), async (req, res) => {
     const evidenceIndex = evidenceItems.findIndex(r => r.id === req.params.reportID);
 
     if (evidenceIndex === -1) {
@@ -1278,8 +1278,8 @@ app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requ
         return denyAbac(res, "Only VALIDATED evidence can be accepted.");
     }
 
-    // Subject attribute check: user must belong to the finance department
-    if (req.user.department !== "finance") {
+    // Subject attribute check: user must belong to the configured audit department
+    if (req.user.department !== "cybersecurity-audit") {
         return denyAbac(res, "User department is not allowed to accept audit evidence.");
     }
 
@@ -1342,7 +1342,7 @@ app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requ
 });
 
 // Script Validation Endpoint (Status SUBMITTED -> VALIDATED)
-app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['system-auditor']), (req, res) => {
+app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['automated-validator']), (req, res) => {
     const evidenceIndex = evidenceItems.findIndex(r => r.id === req.params.reportID);
     if (evidenceIndex === -1) return res.status(404).json({ error: "Evidence not found." });
 
@@ -1360,7 +1360,7 @@ app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requi
     }
 
     evidence.status = "VALIDATED";
-    evidence.validated_by = req.user.preferred_username || "report-verifier-client";
+    evidence.validated_by = req.user.preferred_username || "audit-validator-client";
     evidence.validated_date = new Date().toISOString();
     evidence.review_note = "Validated by automated controls check.";
     markAuditItemInReview(evidence.audit_item_id);
@@ -1379,7 +1379,7 @@ app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requi
 });
 
 // Analyst Validation Endpoint (Status SUBMITTED -> VALIDATED)
-app.patch('/api/analyst/validate/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), (req, res) => {
+app.patch('/api/analyst/validate/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['audit-analyst']), (req, res) => {
     const evidenceIndex = evidenceItems.findIndex(r => r.id === req.params.reportID);
     if (evidenceIndex === -1) return res.status(404).json({ error: "Evidence not found." });
 
@@ -1390,7 +1390,7 @@ app.patch('/api/analyst/validate/:reportID', verifyToken, requireApiAudience, re
         return denyAbac(res, "An evidence author cannot validate their own evidence.");
     }
     if (evidence.status !== "SUBMITTED") {
-        return denyAbac(res, "Only SUBMITTED evidence can be validated by an analyst.");
+        return denyAbac(res, "Only SUBMITTED evidence can be validated by an audit analyst.");
     }
     if (!isFrontendRequest(req)) {
         return denyAbac(res, "Analyst validation must come from the audit dashboard.");

@@ -105,46 +105,46 @@
         </div>
     </section>
 
-    <section id="analystSection" class="card hidden" style="background:#f3e8ff;border-color:#d8b4fe;">
+    <section id="auditAnalystSection" class="card hidden" style="background:#f3e8ff;border-color:#d8b4fe;">
         <h2 style="margin-top:0;">Audit Analyst Workspace</h2>
         <nav class="tabs">
-            <button class="tab-btn active" type="button" data-tab-group="analyst" data-tab-target="audits">Audit Items</button>
-            <button class="tab-btn" type="button" data-tab-group="analyst" data-tab-target="review">Submitted Evidence Review</button>
-            <button class="tab-btn" type="button" data-tab-group="analyst" data-tab-target="requests">Evidence Requests</button>
-            <button class="tab-btn" type="button" data-tab-group="analyst" data-tab-target="determinations">Determination Drafts</button>
-            <button class="tab-btn" type="button" data-tab-group="analyst" data-tab-target="findings">Finding Drafts</button>
-            <button class="tab-btn" type="button" data-tab-group="analyst" data-tab-target="accepted">Accepted Evidence</button>
+            <button class="tab-btn active" type="button" data-tab-group="audit-analyst" data-tab-target="audits">Audit Items</button>
+            <button class="tab-btn" type="button" data-tab-group="audit-analyst" data-tab-target="review">Submitted Evidence Review</button>
+            <button class="tab-btn" type="button" data-tab-group="audit-analyst" data-tab-target="requests">Evidence Requests</button>
+            <button class="tab-btn" type="button" data-tab-group="audit-analyst" data-tab-target="determinations">Determination Drafts</button>
+            <button class="tab-btn" type="button" data-tab-group="audit-analyst" data-tab-target="findings">Finding Drafts</button>
+            <button class="tab-btn" type="button" data-tab-group="audit-analyst" data-tab-target="accepted">Accepted Evidence</button>
         </nav>
-        <p id="analystSuccess" class="success hidden"></p>
+        <p id="auditAnalystSuccess" class="success hidden"></p>
 
-        <div data-panel-group="analyst" data-panel-target="audits">
-            <button id="refreshAnalystAuditsBtn" type="button">Refresh Audit Items</button>
+        <div data-panel-group="audit-analyst" data-panel-target="audits">
+            <button id="refreshAuditAnalystAuditsBtn" type="button">Refresh Audit Items</button>
             <div class="table-wrap">
-                <table id="analystAuditsTable">
+                <table id="auditAnalystAuditsTable">
                     <thead><tr><th>ID</th><th>Criterion</th><th>Title</th><th>Owner</th><th>Status</th><th>Draft Determination</th><th>Final Determination</th></tr></thead>
-                    <tbody id="analystAuditsBody"></tbody>
+                    <tbody id="auditAnalystAuditsBody"></tbody>
                 </table>
-                <p id="analystAuditsEmpty" class="muted hidden">No audit items found.</p>
+                <p id="auditAnalystAuditsEmpty" class="muted hidden">No audit items found.</p>
             </div>
         </div>
 
-        <div class="hidden" data-panel-group="analyst" data-panel-target="review">
-            <button id="refreshAnalystReviewBtn" type="button">Refresh Submitted Evidence</button>
+        <div class="hidden" data-panel-group="audit-analyst" data-panel-target="review">
+            <button id="refreshAuditAnalystReviewBtn" type="button">Refresh Submitted Evidence</button>
             <div class="table-wrap">
-                <table id="analystReviewTable">
+                <table id="auditAnalystReviewTable">
                     <thead><tr><th>Audit</th><th>Criterion</th><th>Request</th><th>Evidence</th><th>Filename</th><th>Author</th><th>Submitted Note</th><th>Sensitivity</th><th>Region</th><th>Review Note</th><th>Action</th></tr></thead>
-                    <tbody id="analystReviewBody"></tbody>
+                    <tbody id="auditAnalystReviewBody"></tbody>
                 </table>
-                <p id="analystReviewEmpty" class="muted hidden">No SUBMITTED evidence is awaiting review.</p>
+                <p id="auditAnalystReviewEmpty" class="muted hidden">No SUBMITTED evidence is awaiting review.</p>
             </div>
         </div>
 
-        <div class="hidden" data-panel-group="analyst" data-panel-target="requests">
-            <button id="refreshAnalystRequestsBtn" type="button">Refresh Evidence Requests</button>
+        <div class="hidden" data-panel-group="audit-analyst" data-panel-target="requests">
+            <button id="refreshAuditAnalystRequestsBtn" type="button">Refresh Evidence Requests</button>
             <div class="table-wrap">
-                <table id="analystRequestsTable">
+                <table id="auditAnalystRequestsTable">
                     <thead><tr><th>Request</th><th>Audit</th><th>Criterion</th><th>Title</th><th>Assigned To</th><th>Due</th><th>Status</th><th>Drafted By</th></tr></thead>
-                    <tbody id="analystRequestsBody"></tbody>
+                    <tbody id="auditAnalystRequestsBody"></tbody>
                 </table>
             </div>
             <form id="draftEvidenceRequestForm" class="subcard">
@@ -161,7 +161,7 @@
             </form>
         </div>
 
-        <div class="hidden" data-panel-group="analyst" data-panel-target="determinations">
+        <div class="hidden" data-panel-group="audit-analyst" data-panel-target="determinations">
             <button id="refreshDeterminationDraftsBtn" type="button">Refresh Determination Context</button>
             <div class="table-wrap">
                 <table id="determinationDraftsTable">
@@ -180,12 +180,12 @@
             </form>
         </div>
 
-        <div class="hidden" data-panel-group="analyst" data-panel-target="findings">
-            <button id="refreshAnalystFindingsBtn" type="button">Refresh Findings</button>
+        <div class="hidden" data-panel-group="audit-analyst" data-panel-target="findings">
+            <button id="refreshAuditAnalystFindingsBtn" type="button">Refresh Findings</button>
             <h3>Draft Findings</h3>
-            <div class="table-wrap"><table id="analystDraftFindingsTable"><thead><tr><th>ID</th><th>Audit</th><th>Condition</th><th>Owner</th><th>Due</th><th>Drafted By</th></tr></thead><tbody id="analystDraftFindingsBody"></tbody></table></div>
+            <div class="table-wrap"><table id="auditAnalystDraftFindingsTable"><thead><tr><th>ID</th><th>Audit</th><th>Condition</th><th>Owner</th><th>Due</th><th>Drafted By</th></tr></thead><tbody id="auditAnalystDraftFindingsBody"></tbody></table></div>
             <h3>Approved Findings and Retest</h3>
-            <div class="table-wrap"><table id="analystApprovedFindingsTable"><thead><tr><th>ID</th><th>Audit</th><th>Condition</th><th>Owner</th><th>Status</th><th>Retest Action</th></tr></thead><tbody id="analystApprovedFindingsBody"></tbody></table></div>
+            <div class="table-wrap"><table id="auditAnalystApprovedFindingsTable"><thead><tr><th>ID</th><th>Audit</th><th>Condition</th><th>Owner</th><th>Status</th><th>Retest Action</th></tr></thead><tbody id="auditAnalystApprovedFindingsBody"></tbody></table></div>
             <form id="draftFindingForm" class="subcard">
                 <h3>Draft Finding</h3>
                 <div class="form-grid">
@@ -203,7 +203,7 @@
             </form>
         </div>
 
-        <div class="hidden" data-panel-group="analyst" data-panel-target="accepted">
+        <div class="hidden" data-panel-group="audit-analyst" data-panel-target="accepted">
             <button id="refreshAcceptedEvidenceBtn" type="button">Refresh Accepted Evidence</button>
             <div class="table-wrap"><table id="acceptedEvidenceTable"><thead><tr><th>Evidence</th><th>Audit</th><th>Criterion</th><th>Request</th><th>Filename</th><th>Author</th><th>Accepted By</th><th>Accepted Date</th></tr></thead><tbody id="acceptedEvidenceBody"></tbody></table></div>
             <p id="acceptedEvidenceEmpty" class="muted hidden">No accepted evidence found.</p>
@@ -290,8 +290,8 @@
       const API_BASE = "http://localhost:3050";
       const keycloak = new Keycloak({
         url: "http://192.168.30.10:8080",
-        realm: "secure-finance",
-        clientId: "finance-portal-spa"
+        realm: "cyber-audit-portal",
+        clientId: "cyber-audit-portal-spa"
       });
       let roles = [];
       let activeWorkspace = null;
@@ -300,7 +300,7 @@
         const authenticated = await keycloak.init({
           onLoad: "login-required",
           checkLoginIframe: false,
-          scope: "openid profile email finance-abac-claims"
+          scope: "openid profile email audit-context-claims"
         });
         if (authenticated) {
           roles = keycloak.tokenParsed?.realm_access?.roles || [];
@@ -309,9 +309,9 @@
             ? roles.map(role => `<span class="role-badge">${escapeHtml(role)}</span>`).join("")
             : "No roles assigned";
           const availableWorkspaces = [
-            { role: "accountant", key: "owner", label: "Control Owner", eligible: keycloak.tokenParsed?.department === "finance" },
-            { role: "analyst", key: "analyst", label: "Audit Analyst", eligible: true },
-            { role: "finance-manager", key: "manager", label: "Audit Manager", eligible: keycloak.tokenParsed?.department === "finance" }
+            { role: "control-owner", key: "owner", label: "Control Owner", eligible: keycloak.tokenParsed?.department === "cybersecurity-audit" },
+            { role: "audit-analyst", key: "audit-analyst", label: "Audit Analyst", eligible: true },
+            { role: "audit-manager", key: "manager", label: "Audit Manager", eligible: keycloak.tokenParsed?.department === "cybersecurity-audit" }
           ].filter(workspace => roles.includes(workspace.role) && workspace.eligible);
           if (availableWorkspaces.length) {
             activeWorkspace = availableWorkspaces[0].key;
@@ -332,7 +332,7 @@
               });
             }
             activateWorkspace(activeWorkspace);
-          } else if (roles.some(role => ["accountant", "analyst", "finance-manager"].includes(role))) {
+          } else if (roles.some(role => ["control-owner", "audit-analyst", "audit-manager"].includes(role))) {
             showError("Your role is not eligible for an interactive workspace with the current authorization attributes.");
           }
         }
@@ -369,7 +369,7 @@
       function activateWorkspace(target) {
         activeWorkspace = target;
         document.getElementById("ownerSection").classList.toggle("hidden", target !== "owner");
-        document.getElementById("analystSection").classList.toggle("hidden", target !== "analyst");
+        document.getElementById("auditAnalystSection").classList.toggle("hidden", target !== "audit-analyst");
         document.getElementById("managerSection").classList.toggle("hidden", target !== "manager");
         document.querySelectorAll("[data-workspace-target]").forEach(button => button.classList.toggle("active", button.dataset.workspaceTarget === target));
       }
@@ -410,12 +410,12 @@
         "owner:upload": () => loadOwnerRequests(false),
         "owner:evidence": () => loadMyEvidence(false),
         "owner:findings": () => loadOwnerFindings(false),
-        "analyst:audits": () => loadAnalystAudits(false),
-        "analyst:review": () => loadAnalystReview(false),
-        "analyst:requests": () => loadAnalystRequests(false),
-        "analyst:determinations": () => loadDeterminationDrafts(false),
-        "analyst:findings": () => loadAnalystFindings(false),
-        "analyst:accepted": () => loadAcceptedEvidence(false),
+        "audit-analyst:audits": () => loadAuditAnalystAudits(false),
+        "audit-analyst:review": () => loadAuditAnalystReview(false),
+        "audit-analyst:requests": () => loadAuditAnalystRequests(false),
+        "audit-analyst:determinations": () => loadDeterminationDrafts(false),
+        "audit-analyst:findings": () => loadAuditAnalystFindings(false),
+        "audit-analyst:accepted": () => loadAcceptedEvidence(false),
         "manager:audits": () => loadManagerAudits(false),
         "manager:requests": () => loadRequestApprovals(false),
         "manager:acceptance": () => loadValidatedEvidence(false),
@@ -425,7 +425,7 @@
       };
       const workspaceDefaultLoaders = {
         owner: () => loadOwnerRequests(false),
-        analyst: () => loadAnalystAudits(false),
+        "audit-analyst": () => loadAuditAnalystAudits(false),
         manager: () => loadManagerAudits(false)
       };
 
@@ -506,7 +506,7 @@
         tbody.innerHTML = "";
         items.forEach(item => {
           const row = document.createElement("tr");
-          if (mode === "analyst") {
+          if (mode === "auditAnalyst") {
             row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.owner)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.determination_draft)}</td><td>${escapeHtml(item.determination)}</td>`;
           } else {
             row.innerHTML = `<td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.criterion_id)}</td><td>${escapeHtml(item.title)}</td><td>${escapeHtml(item.owner)}</td><td>${escapeHtml(item.status)}</td><td>${escapeHtml(item.created_by)}</td>`;
@@ -515,17 +515,17 @@
         });
       }
 
-      async function loadAnalystAudits(updateApiResponse = true) {
+      async function loadAuditAnalystAudits(updateApiResponse = true) {
         const { response, data } = await apiRequest("/api/audit-items", { updateApiResponse, loading: "Loading audit items..." });
         const items = response?.ok && Array.isArray(data) ? data : [];
-        renderAuditRows("analystAuditsBody", items, "analyst");
-        setTableState("analystAuditsTable", "analystAuditsEmpty", items.length > 0);
+        renderAuditRows("auditAnalystAuditsBody", items, "auditAnalyst");
+        setTableState("auditAnalystAuditsTable", "auditAnalystAuditsEmpty", items.length > 0);
       }
 
-      async function loadAnalystReview(updateApiResponse = true) {
+      async function loadAuditAnalystReview(updateApiResponse = true) {
         const { response, data } = await apiRequest("/api/pending/report", { updateApiResponse, loading: "Loading submitted evidence..." });
         const items = response?.ok && Array.isArray(data) ? data : [];
-        const tbody = document.getElementById("analystReviewBody");
+        const tbody = document.getElementById("auditAnalystReviewBody");
         tbody.innerHTML = "";
         items.forEach(item => {
           const row = document.createElement("tr");
@@ -536,7 +536,7 @@
           const note = button.closest("tr").querySelector(".review-note").value;
           validateEvidence(button.dataset.evidenceId, note, button);
         }));
-        setTableState("analystReviewTable", "analystReviewEmpty", items.length > 0);
+        setTableState("auditAnalystReviewTable", "auditAnalystReviewEmpty", items.length > 0);
       }
 
       async function validateEvidence(evidenceId, reviewNote, button) {
@@ -545,15 +545,15 @@
           method: "PATCH", ...jsonOptions({ review_note: reviewNote }), loading: "Validating evidence..."
         });
         if (response?.ok) {
-          showSuccess("analystSuccess", data.message);
-          await loadAnalystReview(false);
+          showSuccess("auditAnalystSuccess", data.message);
+          await loadAuditAnalystReview(false);
         } else button.disabled = false;
       }
 
-      async function loadAnalystRequests(updateApiResponse = true) {
+      async function loadAuditAnalystRequests(updateApiResponse = true) {
         const { response, data } = await apiRequest("/api/evidence-requests", { updateApiResponse, loading: "Loading evidence requests..." });
         const items = response?.ok && Array.isArray(data) ? data : [];
-        const tbody = document.getElementById("analystRequestsBody");
+        const tbody = document.getElementById("auditAnalystRequestsBody");
         tbody.innerHTML = "";
         items.forEach(item => {
           const row = document.createElement("tr");
@@ -574,13 +574,13 @@
         });
       }
 
-      async function loadAnalystFindings(updateApiResponse = true) {
+      async function loadAuditAnalystFindings(updateApiResponse = true) {
         const { response, data } = await apiRequest("/api/findings", { updateApiResponse, loading: "Loading findings..." });
         const items = response?.ok && Array.isArray(data) ? data : [];
         const drafts = items.filter(item => item.status === "DRAFT");
         const approved = items.filter(item => item.status !== "DRAFT");
-        const draftBody = document.getElementById("analystDraftFindingsBody");
-        const approvedBody = document.getElementById("analystApprovedFindingsBody");
+        const draftBody = document.getElementById("auditAnalystDraftFindingsBody");
+        const approvedBody = document.getElementById("auditAnalystApprovedFindingsBody");
         draftBody.innerHTML = "";
         approvedBody.innerHTML = "";
         drafts.forEach(item => {
@@ -606,8 +606,8 @@
           method: "PATCH", ...jsonOptions({ retest_note: note }), loading: "Recording retest..."
         });
         if (response?.ok) {
-          showSuccess("analystSuccess", data.message);
-          await loadAnalystFindings(false);
+          showSuccess("auditAnalystSuccess", data.message);
+          await loadAuditAnalystFindings(false);
         } else button.disabled = false;
       }
 
@@ -742,11 +742,11 @@
       document.getElementById("refreshOwnerRequestsBtn").addEventListener("click", () => loadOwnerRequests());
       document.getElementById("refreshMyEvidenceBtn").addEventListener("click", () => loadMyEvidence());
       document.getElementById("refreshAssignedFindingsBtn").addEventListener("click", () => loadOwnerFindings());
-      document.getElementById("refreshAnalystAuditsBtn").addEventListener("click", () => loadAnalystAudits());
-      document.getElementById("refreshAnalystReviewBtn").addEventListener("click", () => loadAnalystReview());
-      document.getElementById("refreshAnalystRequestsBtn").addEventListener("click", () => loadAnalystRequests());
+      document.getElementById("refreshAuditAnalystAuditsBtn").addEventListener("click", () => loadAuditAnalystAudits());
+      document.getElementById("refreshAuditAnalystReviewBtn").addEventListener("click", () => loadAuditAnalystReview());
+      document.getElementById("refreshAuditAnalystRequestsBtn").addEventListener("click", () => loadAuditAnalystRequests());
       document.getElementById("refreshDeterminationDraftsBtn").addEventListener("click", () => loadDeterminationDrafts());
-      document.getElementById("refreshAnalystFindingsBtn").addEventListener("click", () => loadAnalystFindings());
+      document.getElementById("refreshAuditAnalystFindingsBtn").addEventListener("click", () => loadAuditAnalystFindings());
       document.getElementById("refreshAcceptedEvidenceBtn").addEventListener("click", () => loadAcceptedEvidence());
       document.getElementById("refreshManagerAuditsBtn").addEventListener("click", () => loadManagerAudits());
       document.getElementById("refreshRequestApprovalsBtn").addEventListener("click", () => loadRequestApprovals());
@@ -778,9 +778,9 @@
         delete payload.audit_item_id;
         const { response, data } = await apiRequest(`/api/audit-items/${encodeURIComponent(auditId)}/evidence-request-drafts`, { method: "POST", ...jsonOptions(payload), loading: "Saving request draft..." });
         if (response?.ok) {
-          showSuccess("analystSuccess", data.message);
+          showSuccess("auditAnalystSuccess", data.message);
           form.reset();
-          await loadAnalystRequests(false);
+          await loadAuditAnalystRequests(false);
         }
       });
 
@@ -792,7 +792,7 @@
         delete payload.audit_item_id;
         const { response, data } = await apiRequest(`/api/audit-items/${encodeURIComponent(auditId)}/determination-draft`, { method: "PATCH", ...jsonOptions(payload), loading: "Saving determination draft..." });
         if (response?.ok) {
-          showSuccess("analystSuccess", data.message);
+          showSuccess("auditAnalystSuccess", data.message);
           form.reset();
           await loadDeterminationDrafts(false);
         }
@@ -806,9 +806,9 @@
         delete payload.audit_item_id;
         const { response, data } = await apiRequest(`/api/audit-items/${encodeURIComponent(auditId)}/finding-drafts`, { method: "POST", ...jsonOptions(payload), loading: "Saving finding draft..." });
         if (response?.ok) {
-          showSuccess("analystSuccess", data.message);
+          showSuccess("auditAnalystSuccess", data.message);
           form.reset();
-          await loadAnalystFindings(false);
+          await loadAuditAnalystFindings(false);
         }
       });
 
