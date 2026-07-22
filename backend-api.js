@@ -7,6 +7,7 @@ const path = require('path');
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 const PORT = 3050;
 
 // --- Setup Multer for File Storage ---
@@ -21,40 +22,243 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// Simulated Database with Resource Attributes
+// Simulated in-memory audit workflow data
+let auditItems = [
+    {
+        id: "AUD-001",
+        criterion_id: "NET-CRIT-001",
+        title: "Outbound HTTPS must pass through PROXY01",
+        description: "Verify that APP01 outbound HTTPS traffic is restricted to the approved proxy unless an authorized exception exists.",
+        owner: "Network Team",
+        status: "IN_REVIEW",
+        determination_draft: "OTHER_THAN_SATISFIED",
+        determination_draft_rationale: "The legacy direct-access rule conflicts with the approved proxy criterion.",
+        determination_drafted_by: "analyst1",
+        determination_drafted_date: "2026-07-06T08:30:00.000Z",
+        determination: null,
+        determination_rationale: null,
+        conclusion_cause: null,
+        created_by: "manager2",
+        created_date: "2026-07-01T09:00:00.000Z",
+        concluded_by: null,
+        concluded_date: null
+    },
+    {
+        id: "AUD-002",
+        criterion_id: "IAM-CRIT-001",
+        title: "Privileged access must use MFA",
+        description: "Verify that administrative access requires an approved MFA method.",
+        owner: "Identity Team",
+        status: "EVIDENCE_REQUESTED",
+        determination_draft: "INSUFFICIENT_EVIDENCE",
+        determination_draft_rationale: "The outstanding privileged-access records prevent a supported conclusion.",
+        determination_drafted_by: "analyst1",
+        determination_drafted_date: "2026-07-06T10:30:00.000Z",
+        determination: null,
+        determination_rationale: null,
+        conclusion_cause: null,
+        created_by: "manager2",
+        created_date: "2026-07-02T09:00:00.000Z",
+        concluded_by: null,
+        concluded_date: null
+    }
+];
+
+let evidenceRequests = [
+    {
+        id: "ERQ-001",
+        audit_item_id: "AUD-001",
+        title: "Provide outbound firewall and proxy configuration",
+        description: "Upload firewall rules, proxy configuration, and approved exceptions.",
+        requested_from: "Network Team",
+        assigned_to: "alice",
+        drafted_by: "analyst1",
+        drafted_date: "2026-07-03T08:30:00.000Z",
+        approved_by: "manager1",
+        approved_date: "2026-07-03T09:00:00.000Z",
+        requested_by: "manager1",
+        requested_date: "2026-07-03T09:00:00.000Z",
+        due_date: "2026-07-31",
+        status: "CLOSED",
+        response_note: "Initial network evidence package uploaded."
+    },
+    {
+        id: "ERQ-002",
+        audit_item_id: "AUD-002",
+        title: "Provide privileged MFA enforcement evidence",
+        description: "Upload the MFA policy and a current privileged-access configuration export.",
+        requested_from: "Identity Team",
+        assigned_to: "bob",
+        drafted_by: "analyst1",
+        drafted_date: "2026-07-04T08:30:00.000Z",
+        approved_by: "manager1",
+        approved_date: "2026-07-04T09:00:00.000Z",
+        requested_by: "manager1",
+        requested_date: "2026-07-04T09:00:00.000Z",
+        due_date: "2026-08-07",
+        status: "OPEN",
+        response_note: null
+    },
+    {
+        id: "ERQ-003",
+        audit_item_id: "AUD-002",
+        title: "Provide privileged access review records",
+        description: "Provide the latest privileged account review and exception approvals.",
+        requested_from: "Identity Team",
+        assigned_to: "bob",
+        drafted_by: "analyst1",
+        drafted_date: "2026-07-06T09:30:00.000Z",
+        approved_by: null,
+        approved_date: null,
+        requested_by: null,
+        requested_date: null,
+        due_date: "2026-08-14",
+        status: "DRAFT",
+        response_note: null
+    },
+    {
+        id: "ERQ-004",
+        audit_item_id: "AUD-001",
+        title: "Provide outbound firewall rule export",
+        description: "Upload the current rules governing APP01 outbound production traffic.",
+        requested_from: "Network Team",
+        assigned_to: "alice",
+        drafted_by: "analyst1",
+        drafted_date: "2026-07-03T08:40:00.000Z",
+        approved_by: "manager3",
+        approved_date: "2026-07-03T09:10:00.000Z",
+        requested_by: "manager3",
+        requested_date: "2026-07-03T09:10:00.000Z",
+        due_date: "2026-07-31",
+        status: "SUBMITTED",
+        response_note: "Firewall rule export uploaded."
+    },
+    {
+        id: "ERQ-005",
+        audit_item_id: "AUD-001",
+        title: "Provide approved proxy exception register",
+        description: "Upload the current approved outbound proxy exception register.",
+        requested_from: "Network Team",
+        assigned_to: "alice",
+        drafted_by: "analyst1",
+        drafted_date: "2026-07-03T08:50:00.000Z",
+        approved_by: "manager3",
+        approved_date: "2026-07-03T09:20:00.000Z",
+        requested_by: "manager3",
+        requested_date: "2026-07-03T09:20:00.000Z",
+        due_date: "2026-07-31",
+        status: "SUBMITTED",
+        response_note: "Proxy exception register uploaded."
+    }
+];
+
 let evidenceItems = [
     {
         id: "EVD-001",
+        audit_item_id: "AUD-001",
+        evidence_request_id: "ERQ-001",
+        description: "Approved proxy configuration export.",
+        submitted_note: "Configuration exported from PROXY01.",
         author: "alice",
-        filename: "evidence1.txt",
-        date: "2026-03-02T17:15:00.000Z",
+        filename: "proxy-config.txt",
+        date: "2026-07-05T10:00:00.000Z",
         status: "ACCEPTED",
         sensitivity: "low",
         region: "AU",
-        accepted_date: "2026-03-02T17:20:00.000Z",
-        accepted_by: "MANAGER"
+        validated_by: "analyst1",
+        validated_date: "2026-07-05T11:00:00.000Z",
+        review_note: "Configuration identifies the approved outbound proxy.",
+        accepted_date: "2026-07-05T12:00:00.000Z",
+        accepted_by: "manager3"
     },
     {
         id: "EVD-002",
-        author: "bob",
-        filename: "evidence2.txt",
-        date: "2026-04-05T17:15:00.000Z",
+        audit_item_id: "AUD-001",
+        evidence_request_id: "ERQ-004",
+        description: "Outbound firewall rule export.",
+        submitted_note: "Rules covering APP01 production traffic.",
+        author: "alice",
+        filename: "firewall-rules.txt",
+        date: "2026-07-05T10:05:00.000Z",
         status: "SUBMITTED",
         sensitivity: "high",
         region: "AU",
-        accepted_date: "",
-        accepted_by: ""
+        validated_by: null,
+        validated_date: null,
+        review_note: null,
+        accepted_date: null,
+        accepted_by: null
     },
     {
         id: "EVD-003",
+        audit_item_id: "AUD-001",
+        evidence_request_id: "ERQ-005",
+        description: "Approved proxy exception register.",
+        submitted_note: "Current exception register for analyst review.",
         author: "alice",
-        filename: "evidence3.txt",
-        date: "2026-01-06T17:15:00.000Z",
+        filename: "proxy-exceptions.txt",
+        date: "2026-07-05T10:10:00.000Z",
         status: "VALIDATED",
         sensitivity: "high",
         region: "AU",
-        accepted_date: "",
-        accepted_by: ""
+        validated_by: "analyst1",
+        validated_date: "2026-07-05T11:10:00.000Z",
+        review_note: "Exceptions are authorized and in date.",
+        accepted_date: null,
+        accepted_by: null
+    }
+];
+
+let findings = [
+    {
+        id: "FND-001",
+        audit_item_id: "AUD-001",
+        condition: "One legacy outbound rule permits direct HTTPS access.",
+        criteria: "NET-CRIT-001 requires outbound HTTPS to use PROXY01.",
+        cause: "Legacy migration rule was not removed.",
+        effect: "A workload could bypass approved proxy inspection.",
+        recommendation: "Remove the legacy rule and verify traffic through PROXY01.",
+        owner: "Network Team",
+        assigned_to: "alice",
+        due_date: "2026-08-31",
+        status: "OPEN",
+        drafted_by: "analyst1",
+        drafted_date: "2026-07-06T08:45:00.000Z",
+        approved_by: "manager1",
+        approved_date: "2026-07-06T09:00:00.000Z",
+        remediation_note: null,
+        remediated_by: null,
+        remediation_started_date: null,
+        ready_for_retest_date: null,
+        retest_note: null,
+        retested_by: null,
+        retested_date: null,
+        override_history: []
+    },
+    {
+        id: "FND-002",
+        audit_item_id: "AUD-002",
+        condition: "One privileged service account has no recorded MFA exception review.",
+        criteria: "IAM-CRIT-001 requires approved MFA for privileged access.",
+        cause: "The service account predates the current exception workflow.",
+        effect: "Privileged access may occur without an approved compensating control.",
+        recommendation: "Review the account and record an approved MFA exception or remediate access.",
+        owner: "Identity Team",
+        assigned_to: "bob",
+        due_date: "2026-09-15",
+        status: "DRAFT",
+        drafted_by: "analyst1",
+        drafted_date: "2026-07-06T10:00:00.000Z",
+        approved_by: null,
+        approved_date: null,
+        remediation_note: null,
+        remediated_by: null,
+        remediation_started_date: null,
+        ready_for_retest_date: null,
+        retest_note: null,
+        retested_by: null,
+        retested_date: null,
+        override_history: []
     }
 ];
 
@@ -67,6 +271,9 @@ const verifyToken = (req, res, next) => {
     if (!token) return res.status(401).json({ error: 'Malformed token' });
     
     const decoded = jwt.decode(token);
+    if (!decoded || typeof decoded !== "object") {
+        return res.status(401).json({ error: "Invalid bearer token." });
+    }
     req.token = token;
     req.user = decoded;
     next(); 
@@ -114,6 +321,105 @@ function denyAbac(res, reason) {
     error: "ABAC denied",
     reason: reason
   });
+}
+
+const DETERMINATIONS = ["SATISFIED", "OTHER_THAN_SATISFIED", "INSUFFICIENT_EVIDENCE"];
+const FINDING_STATUSES = ["DRAFT", "OPEN", "REMEDIATION_IN_PROGRESS", "READY_FOR_RETEST", "CLOSED"];
+
+function nextId(collection, prefix) {
+  const highest = collection.reduce((max, item) => {
+    const value = Number.parseInt(item.id.replace(`${prefix}-`, ""), 10);
+    return Number.isNaN(value) ? max : Math.max(max, value);
+  }, 0);
+
+  return `${prefix}-${String(highest + 1).padStart(3, "0")}`;
+}
+
+function isManagerWorkflowRequestAllowed(req, res, { requireMfa = false } = {}) {
+  if (req.user.department !== "finance") {
+    denyAbac(res, "Only authorized GRC Lab finance managers can perform this action.");
+    return false;
+  }
+
+  if (!isFrontendRequest(req)) {
+    denyAbac(res, "Manager workflow actions must come from the audit dashboard.");
+    return false;
+  }
+
+  if (requireMfa && !hasMfa(req)) {
+    denyAbac(res, "MFA/OTP is required to conclude an audit item.");
+    return false;
+  }
+
+  return true;
+}
+
+function isAnalystWorkflowRequestAllowed(req, res) {
+  if (!isFrontendRequest(req)) {
+    denyAbac(res, "Analyst workflow actions must come from the audit dashboard.");
+    return false;
+  }
+  return true;
+}
+
+function isControlOwnerWorkflowRequestAllowed(req, res) {
+  if (req.user.department !== "finance") {
+    denyAbac(res, "Only authorized GRC Lab control owners can perform this action.");
+    return false;
+  }
+  if (!isFrontendRequest(req)) {
+    denyAbac(res, "Control-owner actions must come from the audit dashboard.");
+    return false;
+  }
+  return true;
+}
+
+function isEvidenceRequestAssignedToUser(evidenceRequest, user) {
+  return evidenceRequest.assigned_to === user.preferred_username;
+}
+
+function enrichEvidenceRequest(evidenceRequest) {
+  const auditItem = auditItems.find(item => item.id === evidenceRequest.audit_item_id);
+  return {
+    ...evidenceRequest,
+    criterion_id: auditItem?.criterion_id || null
+  };
+}
+
+function enrichEvidence(evidence) {
+  const auditItem = auditItems.find(item => item.id === evidence.audit_item_id);
+  return {
+    ...evidence,
+    criterion_id: auditItem?.criterion_id || null
+  };
+}
+
+function markAuditItemInReview(auditItemId) {
+  const auditItem = auditItems.find(item => item.id === auditItemId);
+  if (auditItem && auditItem.status !== "CONCLUDED") {
+    auditItem.status = "IN_REVIEW";
+  }
+}
+
+function closeEvidenceRequestIfComplete(evidenceRequestId) {
+  if (!evidenceRequestId) return false;
+
+  const evidenceRequest = evidenceRequests.find(item => item.id === evidenceRequestId);
+  if (!evidenceRequest) return false;
+
+  const linkedEvidence = evidenceItems.filter(item => item.evidence_request_id === evidenceRequestId);
+  if (linkedEvidence.length === 0 || !linkedEvidence.every(item => item.status === "ACCEPTED")) {
+    return false;
+  }
+
+  evidenceRequest.status = "CLOSED";
+  return true;
+}
+
+function removeUploadedFile(file) {
+  if (file?.path && fs.existsSync(file.path)) {
+    fs.unlinkSync(file.path);
+  }
 }
 
 function hasRequiredAudience(req) {
@@ -316,38 +622,534 @@ app.get('/api/public', (req, res) => {
    res.send({ message: 'Welcome to the Cyber Audit Portal' });
 });
 
-// Upload Endpoint (Status becomes SUBMITTED)
-app.post('/api/upload/report', verifyToken, requireApiAudience, requireAnyRole(['accountant', 'finance-manager']), upload.single('reportDoc'), (req, res) => {
-  const requestSource = getRequestSource(req);
+// Audit Item Endpoints
+app.get('/api/audit-items', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+  res.json(auditItems);
+});
 
-  // Subject attribute check: only finance department users can upload audit evidence
-  if (req.user.department !== "finance") {
-    return denyAbac(res, "Only authorized GRC Lab team members can upload audit evidence.");
+app.get('/api/audit-items/:auditItemID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+  if (!isManagerWorkflowRequestAllowed(req, res)) return;
+
+  const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
+  if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
+
+  res.json({
+    audit_item: auditItem,
+    evidence_requests: evidenceRequests.filter(item => item.audit_item_id === auditItem.id),
+    evidence: evidenceItems.filter(item =>
+      item.audit_item_id === auditItem.id &&
+      (!item.region || item.region === req.user.region) &&
+      hasSufficientClearance(req.user.clearanceLevel, item.sensitivity)
+    ).map(enrichEvidence),
+    findings: findings.filter(item => item.audit_item_id === auditItem.id)
+  });
+});
+
+app.post('/api/audit-items', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+  if (!isManagerWorkflowRequestAllowed(req, res)) return;
+
+  const { criterion_id, title, description, owner } = req.body || {};
+  if (![criterion_id, title, description, owner].every(value => typeof value === "string" && value.trim())) {
+    return res.status(400).json({ error: "criterion_id, title, description, and owner are required." });
   }
 
-  // Environment attribute check: upload must come from the human frontend
-  if (!isFrontendRequest(req)) {
-    return denyAbac(res, "Evidence upload must come from the audit dashboard.");
+  const newAuditItem = {
+    id: nextId(auditItems, "AUD"),
+    criterion_id: criterion_id.trim(),
+    title: title.trim(),
+    description: description.trim(),
+    owner: owner.trim(),
+    status: "OPEN",
+    determination_draft: null,
+    determination_draft_rationale: null,
+    determination_drafted_by: null,
+    determination_drafted_date: null,
+    determination: null,
+    determination_rationale: null,
+    conclusion_cause: null,
+    created_by: req.user.preferred_username,
+    created_date: new Date().toISOString(),
+    concluded_by: null,
+    concluded_date: null
+  };
+
+  auditItems.push(newAuditItem);
+  res.status(201).json({
+    message: `Audit item ${newAuditItem.id} created successfully.`,
+    audit_item: newAuditItem
+  });
+});
+
+app.patch('/api/audit-items/:auditItemID/conclude', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+  if (!isManagerWorkflowRequestAllowed(req, res, { requireMfa: true })) return;
+
+  const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
+  if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
+  if (auditItem.status === "CONCLUDED") {
+    return res.status(409).json({ error: "This audit item is already concluded and its determination cannot be changed." });
+  }
+  if (auditItem.created_by === req.user.preferred_username) {
+    return denyAbac(res, "A manager cannot conclude an audit item they created. Independent manager review is required.");
+  }
+  if (!auditItem.determination_draft || !auditItem.determination_draft_rationale) {
+    return res.status(409).json({ error: "An analyst determination draft is required before manager conclusion." });
+  }
+  if (auditItem.determination_drafted_by === req.user.preferred_username) {
+    return denyAbac(res, "The determination drafter cannot finalize the same audit item.");
+  }
+
+  const determination = typeof req.body?.determination === "string" ? req.body.determination.trim() : "";
+  const rationale = typeof req.body?.rationale === "string" ? req.body.rationale.trim() : "";
+  if (!DETERMINATIONS.includes(determination)) {
+    return res.status(400).json({ error: `determination must be one of: ${DETERMINATIONS.join(", ")}.` });
+  }
+  if (!rationale) return res.status(400).json({ error: "A determination rationale is required." });
+
+  const linkedEvidence = evidenceItems.filter(item => item.audit_item_id === auditItem.id);
+  const linkedRequests = evidenceRequests.filter(item => item.audit_item_id === auditItem.id);
+  const linkedFindings = findings.filter(item => item.audit_item_id === auditItem.id && item.status !== "DRAFT");
+  const managerReviewedAllEvidence = linkedEvidence.length > 0 && linkedEvidence.every(item =>
+    item.validated_by === req.user.preferred_username || item.accepted_by === req.user.preferred_username
+  );
+
+  if (managerReviewedAllEvidence) {
+    return denyAbac(res, "A manager who validated or accepted all linked evidence cannot conclude the audit item.");
+  }
+
+  if (determination === "SATISFIED") {
+    if (!linkedEvidence.some(item => item.status === "ACCEPTED")) {
+      return res.status(409).json({ error: "SATISFIED requires at least one ACCEPTED evidence item." });
+    }
+    if (!linkedRequests.every(item => item.status === "CLOSED")) {
+      return res.status(409).json({ error: "SATISFIED requires all evidence requests to be CLOSED." });
+    }
+  }
+
+  if (determination === "OTHER_THAN_SATISFIED" && linkedFindings.length === 0) {
+    return res.status(409).json({ error: "OTHER_THAN_SATISFIED requires at least one linked finding." });
+  }
+
+  auditItem.status = "CONCLUDED";
+  auditItem.determination = determination;
+  auditItem.determination_rationale = rationale;
+  auditItem.conclusion_cause = determination === "INSUFFICIENT_EVIDENCE" ? "INSUFFICIENT_EVIDENCE" : null;
+  auditItem.concluded_by = req.user.preferred_username;
+  auditItem.concluded_date = new Date().toISOString();
+
+  res.json({
+    message: `Audit item ${auditItem.id} concluded as ${determination}.`,
+    audit_item: auditItem,
+    insufficient_evidence: determination === "INSUFFICIENT_EVIDENCE"
+  });
+});
+
+app.patch('/api/audit-items/:auditItemID/determination-draft', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), (req, res) => {
+  if (!isAnalystWorkflowRequestAllowed(req, res)) return;
+
+  const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
+  if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
+  if (auditItem.status === "CONCLUDED") {
+    return res.status(409).json({ error: "Cannot draft a determination for a concluded audit item." });
+  }
+
+  const determination = typeof req.body?.determination === "string" ? req.body.determination.trim() : "";
+  const rationale = typeof req.body?.rationale === "string" ? req.body.rationale.trim() : "";
+  if (!DETERMINATIONS.includes(determination)) {
+    return res.status(400).json({ error: `determination must be one of: ${DETERMINATIONS.join(", ")}.` });
+  }
+  if (!rationale) return res.status(400).json({ error: "A draft determination rationale is required." });
+
+  auditItem.determination_draft = determination;
+  auditItem.determination_draft_rationale = rationale;
+  auditItem.determination_drafted_by = req.user.preferred_username;
+  auditItem.determination_drafted_date = new Date().toISOString();
+
+  res.json({
+    message: `Draft determination saved for ${auditItem.id}.`,
+    audit_item: auditItem
+  });
+});
+
+// Evidence Request Endpoints
+// Compatibility route retained, but it now follows the analyst DRAFT workflow.
+app.post('/api/audit-items/:auditItemID/evidence-requests', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), createEvidenceRequestDraft);
+
+app.get('/api/audit-items/:auditItemID/evidence-requests', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+  const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
+  if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
+
+  res.json(evidenceRequests.filter(item => item.audit_item_id === auditItem.id));
+});
+
+app.get('/api/evidence-requests', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+  res.json(evidenceRequests.map(enrichEvidenceRequest));
+});
+
+app.get('/api/evidence-requests/drafts', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+  res.json(evidenceRequests.filter(item => item.status === "DRAFT").map(enrichEvidenceRequest));
+});
+
+function createEvidenceRequestDraft(req, res) {
+  if (!isAnalystWorkflowRequestAllowed(req, res)) return;
+
+  const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
+  if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
+  if (auditItem.status === "CONCLUDED") {
+    return res.status(409).json({ error: "Cannot draft an evidence request for a concluded audit item." });
+  }
+
+  const { title, description, requested_from, assigned_to, due_date } = req.body || {};
+  if (![title, description, requested_from, assigned_to, due_date].every(value => typeof value === "string" && value.trim())) {
+    return res.status(400).json({ error: "title, description, requested_from, assigned_to, and due_date are required." });
+  }
+
+  const newRequest = {
+    id: nextId(evidenceRequests, "ERQ"),
+    audit_item_id: auditItem.id,
+    title: title.trim(),
+    description: description.trim(),
+    requested_from: requested_from.trim(),
+    assigned_to: assigned_to.trim(),
+    drafted_by: req.user.preferred_username,
+    drafted_date: new Date().toISOString(),
+    approved_by: null,
+    approved_date: null,
+    requested_by: null,
+    requested_date: null,
+    due_date: due_date.trim(),
+    status: "DRAFT",
+    response_note: null,
+    issuance_mode: "ANALYST_DRAFT"
+  };
+
+  evidenceRequests.push(newRequest);
+  res.status(201).json({
+    message: `Evidence request draft ${newRequest.id} created for ${auditItem.id}.`,
+    evidence_request: enrichEvidenceRequest(newRequest)
+  });
+}
+
+app.post('/api/audit-items/:auditItemID/evidence-request-drafts', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), createEvidenceRequestDraft);
+
+app.patch('/api/evidence-requests/:evidenceRequestID/issue', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+  if (!isManagerWorkflowRequestAllowed(req, res)) return;
+
+  const evidenceRequest = evidenceRequests.find(item => item.id === req.params.evidenceRequestID);
+  if (!evidenceRequest) return res.status(404).json({ error: "Evidence request not found." });
+  if (evidenceRequest.status !== "DRAFT") {
+    return res.status(409).json({ error: "Only DRAFT evidence requests may be issued." });
+  }
+  if (evidenceRequest.drafted_by === req.user.preferred_username) {
+    return denyAbac(res, "A user cannot issue an evidence request they drafted.");
+  }
+
+  const auditItem = auditItems.find(item => item.id === evidenceRequest.audit_item_id);
+  if (!auditItem || auditItem.status === "CONCLUDED") {
+    return res.status(409).json({ error: "The linked audit item is unavailable or concluded." });
+  }
+
+  evidenceRequest.status = "OPEN";
+  evidenceRequest.approved_by = req.user.preferred_username;
+  evidenceRequest.approved_date = new Date().toISOString();
+  evidenceRequest.requested_by = req.user.preferred_username;
+  evidenceRequest.requested_date = evidenceRequest.approved_date;
+  if (auditItem.status === "OPEN") auditItem.status = "EVIDENCE_REQUESTED";
+
+  res.json({
+    message: `Evidence request ${evidenceRequest.id} issued successfully.`,
+    evidence_request: enrichEvidenceRequest(evidenceRequest)
+  });
+});
+
+app.get('/api/evidence-requests/open', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['accountant']), (req, res) => {
+  if (!isControlOwnerWorkflowRequestAllowed(req, res)) return;
+
+  const assignedRequests = evidenceRequests
+    .filter(item => item.status === "OPEN" && isEvidenceRequestAssignedToUser(item, req.user))
+    .map(enrichEvidenceRequest);
+
+  res.json(assignedRequests);
+});
+
+app.patch('/api/evidence-requests/:evidenceRequestID/close', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+  if (!isManagerWorkflowRequestAllowed(req, res)) return;
+
+  const evidenceRequest = evidenceRequests.find(item => item.id === req.params.evidenceRequestID);
+  if (!evidenceRequest) return res.status(404).json({ error: "Evidence request not found." });
+  if (evidenceRequest.status === "CLOSED") return res.json({ message: "Evidence request is already CLOSED.", evidence_request: evidenceRequest });
+
+  if (!closeEvidenceRequestIfComplete(evidenceRequest.id)) {
+    return res.status(409).json({ error: "Evidence request can close only when it has linked evidence and all linked evidence is ACCEPTED." });
+  }
+
+  res.json({
+    message: `Evidence request ${evidenceRequest.id} closed successfully.`,
+    evidence_request: evidenceRequest
+  });
+});
+
+// Finding Endpoints
+app.get('/api/findings', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+  res.json(findings);
+});
+
+app.get('/api/audit-items/:auditItemID/findings', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+  const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
+  if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
+  res.json(findings.filter(item => item.audit_item_id === auditItem.id));
+});
+
+function createFindingDraft(req, res) {
+  if (!isAnalystWorkflowRequestAllowed(req, res)) return;
+  const auditItem = auditItems.find(item => item.id === req.params.auditItemID);
+  if (!auditItem) return res.status(404).json({ error: "Audit item not found." });
+  if (auditItem.status === "CONCLUDED") {
+    return res.status(409).json({ error: "Cannot draft a finding for a concluded audit item." });
+  }
+
+  const { condition, criteria, cause, effect, recommendation, owner, assigned_to, due_date } = req.body || {};
+  if (![condition, criteria, cause, effect, recommendation, owner, assigned_to, due_date].every(value => typeof value === "string" && value.trim())) {
+    return res.status(400).json({ error: "condition, criteria, cause, effect, recommendation, owner, assigned_to, and due_date are required." });
+  }
+
+  const draftedDate = new Date().toISOString();
+  const newFinding = {
+    id: nextId(findings, "FND"),
+    audit_item_id: auditItem.id,
+    condition: condition.trim(),
+    criteria: criteria.trim(),
+    cause: cause.trim(),
+    effect: effect.trim(),
+    recommendation: recommendation.trim(),
+    owner: owner.trim(),
+    assigned_to: assigned_to.trim(),
+    due_date: due_date.trim(),
+    status: "DRAFT",
+    drafted_by: req.user.preferred_username,
+    drafted_date: draftedDate,
+    approved_by: null,
+    approved_date: null,
+    remediation_note: null,
+    remediated_by: null,
+    remediation_started_date: null,
+    ready_for_retest_date: null,
+    retest_note: null,
+    retested_by: null,
+    retested_date: null,
+    override_history: []
+  };
+
+  findings.push(newFinding);
+  res.status(201).json({
+    message: `Finding draft ${newFinding.id} created for ${auditItem.id}.`,
+    finding: newFinding
+  });
+}
+
+app.post('/api/audit-items/:auditItemID/finding-drafts', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), createFindingDraft);
+
+// Compatibility alias: finding creation now follows the analyst DRAFT workflow.
+app.post('/api/audit-items/:auditItemID/findings', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), createFindingDraft);
+
+app.patch('/api/findings/:findingID/approve', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+  if (!isManagerWorkflowRequestAllowed(req, res)) return;
+
+  const finding = findings.find(item => item.id === req.params.findingID);
+  if (!finding) return res.status(404).json({ error: "Finding not found." });
+  if (finding.status !== "DRAFT") {
+    return res.status(409).json({ error: "Only DRAFT findings may be approved." });
+  }
+  if (finding.drafted_by === req.user.preferred_username) {
+    return denyAbac(res, "A user cannot approve a finding they drafted.");
+  }
+
+  finding.status = "OPEN";
+  finding.approved_by = req.user.preferred_username;
+  finding.approved_date = new Date().toISOString();
+
+  res.json({
+    message: `Finding ${finding.id} approved and opened.`,
+    finding: finding
+  });
+});
+
+app.get('/api/findings/assigned', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['accountant']), (req, res) => {
+  if (!isControlOwnerWorkflowRequestAllowed(req, res)) return;
+  res.json(findings.filter(item =>
+    item.status !== "DRAFT" && item.assigned_to === req.user.preferred_username
+  ));
+});
+
+app.patch('/api/findings/:findingID/remediation', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['accountant']), (req, res) => {
+  if (!isControlOwnerWorkflowRequestAllowed(req, res)) return;
+
+  const finding = findings.find(item => item.id === req.params.findingID);
+  if (!finding) return res.status(404).json({ error: "Finding not found." });
+  if (finding.assigned_to !== req.user.preferred_username) {
+    return denyAbac(res, "This finding is not assigned to the current control owner.");
+  }
+
+  const targetStatus = typeof req.body?.status === "string" ? req.body.status.trim() : "";
+  const remediationNote = typeof req.body?.remediation_note === "string" ? req.body.remediation_note.trim() : "";
+  if (!remediationNote) return res.status(400).json({ error: "A remediation_note is required." });
+
+  const validTransition =
+    (finding.status === "OPEN" && targetStatus === "REMEDIATION_IN_PROGRESS") ||
+    (finding.status === "REMEDIATION_IN_PROGRESS" && targetStatus === "READY_FOR_RETEST");
+  if (!validTransition) {
+    return res.status(409).json({ error: `Invalid control-owner transition: ${finding.status} -> ${targetStatus}.` });
+  }
+
+  finding.status = targetStatus;
+  finding.remediation_note = remediationNote;
+  finding.remediated_by = req.user.preferred_username;
+  if (targetStatus === "REMEDIATION_IN_PROGRESS") {
+    finding.remediation_started_date = new Date().toISOString();
+  } else {
+    finding.ready_for_retest_date = new Date().toISOString();
+  }
+
+  res.json({
+    message: `Finding ${finding.id} moved to ${targetStatus}.`,
+    finding: finding
+  });
+});
+
+app.patch('/api/findings/:findingID/retest', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), (req, res) => {
+  if (!isAnalystWorkflowRequestAllowed(req, res)) return;
+
+  const finding = findings.find(item => item.id === req.params.findingID);
+  if (!finding) return res.status(404).json({ error: "Finding not found." });
+  if (finding.status !== "READY_FOR_RETEST") {
+    return res.status(409).json({ error: "Only READY_FOR_RETEST findings may be closed after retest." });
+  }
+  if (finding.remediated_by === req.user.preferred_username) {
+    return denyAbac(res, "The remediation owner cannot perform the independent analyst retest.");
+  }
+
+  const retestNote = typeof req.body?.retest_note === "string" ? req.body.retest_note.trim() : "";
+  if (!retestNote) return res.status(400).json({ error: "A retest_note is required before closure." });
+
+  finding.status = "CLOSED";
+  finding.retest_note = retestNote;
+  finding.retested_by = req.user.preferred_username;
+  finding.retested_date = new Date().toISOString();
+
+  res.json({
+    message: `Finding ${finding.id} closed after analyst retest.`,
+    finding: finding
+  });
+});
+
+app.patch('/api/findings/:findingID/status', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager']), (req, res) => {
+  if (!isManagerWorkflowRequestAllowed(req, res)) return;
+
+  const finding = findings.find(item => item.id === req.params.findingID);
+  if (!finding) return res.status(404).json({ error: "Finding not found." });
+
+  const status = typeof req.body?.status === "string" ? req.body.status.trim() : "";
+  const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
+  if (!FINDING_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `status must be one of: ${FINDING_STATUSES.join(", ")}.` });
+  }
+  if (!reason) return res.status(400).json({ error: "A manager override reason is required." });
+  if (finding.status === "DRAFT" || status === "DRAFT") {
+    return res.status(409).json({ error: "DRAFT findings must use the approval workflow and cannot be manager-overridden." });
+  }
+  if (status === "CLOSED") {
+    return res.status(409).json({ error: "Only an analyst may close a finding through the retest workflow." });
+  }
+
+  const previousStatus = finding.status;
+  finding.status = status;
+  finding.override_history = Array.isArray(finding.override_history) ? finding.override_history : [];
+  finding.override_history.push({
+    from: previousStatus,
+    to: status,
+    reason: reason,
+    overridden_by: req.user.preferred_username,
+    overridden_date: new Date().toISOString()
+  });
+  res.json({
+    message: `Finding ${finding.id} status overridden to ${status}.`,
+    finding: finding
+  });
+});
+
+// Upload Endpoint (Status becomes SUBMITTED)
+app.post('/api/upload/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['accountant']), upload.single('reportDoc'), (req, res) => {
+  const requestSource = getRequestSource(req);
+
+  if (!isControlOwnerWorkflowRequestAllowed(req, res)) {
+    removeUploadedFile(req.file);
+    return;
   }
 
   if (!req.file) return res.status(400).json({ error: "No file was uploaded." });
 
+  const evidenceRequestId = typeof req.body?.evidence_request_id === "string"
+    ? req.body.evidence_request_id.trim()
+    : "";
+  if (!evidenceRequestId) {
+    removeUploadedFile(req.file);
+    return res.status(400).json({ error: "An OPEN evidence_request_id is required." });
+  }
+
+  const evidenceRequest = evidenceRequests.find(item => item.id === evidenceRequestId);
+  if (!evidenceRequest) {
+    removeUploadedFile(req.file);
+    return res.status(404).json({ error: "Evidence request not found." });
+  }
+  if (evidenceRequest.status !== "OPEN") {
+    removeUploadedFile(req.file);
+    return res.status(409).json({ error: "Evidence can only be uploaded against an OPEN evidence request." });
+  }
+  if (!isEvidenceRequestAssignedToUser(evidenceRequest, req.user)) {
+    removeUploadedFile(req.file);
+    return denyAbac(res, "This evidence request is not assigned to the current user.");
+  }
+
+  const auditItem = auditItems.find(item => item.id === evidenceRequest.audit_item_id);
+  if (!auditItem) {
+    removeUploadedFile(req.file);
+    return res.status(409).json({ error: "The evidence request is not linked to a valid audit item." });
+  }
+  if (auditItem.status === "CONCLUDED") {
+    removeUploadedFile(req.file);
+    return res.status(409).json({ error: "Evidence cannot be uploaded for a concluded audit item." });
+  }
+
+  const submittedNote = typeof req.body?.submitted_note === "string" ? req.body.submitted_note.trim() : "";
+  const description = typeof req.body?.description === "string" ? req.body.description.trim() : "";
+
   const newEvidence = {
-        id: `EVD-${String(evidenceItems.length + 1).padStart(3, '0')}`,
+        id: nextId(evidenceItems, "EVD"),
+        audit_item_id: auditItem.id,
+        evidence_request_id: evidenceRequest.id,
+        description: description,
+        submitted_note: submittedNote,
         author: req.user.preferred_username,
         filename: req.file.filename,
         date: new Date().toISOString(),
         status: "SUBMITTED",
         sensitivity: "medium",
         region: req.user.region || "AU",
-        accepted_date: "",
-        accepted_by: ""
+        validated_by: null,
+        validated_date: null,
+        review_note: null,
+        accepted_date: null,
+        accepted_by: null
   };
 
   evidenceItems.push(newEvidence);
+  evidenceRequest.status = "SUBMITTED";
+  evidenceRequest.response_note = submittedNote || null;
+  if (auditItem.status === "OPEN") auditItem.status = "EVIDENCE_REQUESTED";
 
   res.json({
       message: "Success! Audit evidence uploaded securely and is SUBMITTED for validation.",
+      evidence: enrichEvidence(newEvidence),
+      evidence_request: evidenceRequest,
       abacDecision: "Allowed by hybrid RBAC + ABAC policy",
       checkedAttributes: {
           department: req.user.department,
@@ -355,17 +1157,31 @@ app.post('/api/upload/report', verifyToken, requireApiAudience, requireAnyRole([
           evidenceRegion: newEvidence.region,
           evidenceSensitivity: newEvidence.sensitivity,
           requestSource: requestSource,
-          evidenceStatus: newEvidence.status
+          evidenceStatus: newEvidence.status,
+          auditItemId: newEvidence.audit_item_id,
+          evidenceRequestId: newEvidence.evidence_request_id
       }
   });
 });
 
+app.get('/api/evidence/mine', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['accountant']), (req, res) => {
+  if (!isControlOwnerWorkflowRequestAllowed(req, res)) return;
+  const ownEvidence = evidenceItems
+    .filter(item => item.author === req.user.preferred_username && (!item.region || item.region === req.user.region))
+    .map(enrichEvidence);
+  res.json(ownEvidence);
+});
+
 // View ACCEPTED Evidence
-app.get('/api/view/report', verifyToken, requireApiAudience, requireAnyRole(['accountant', 'finance-manager', 'analyst', 'auditor', 'department-head']), (req, res) => {
+app.get('/api/view/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager', 'analyst']), (req, res) => {
+    if (!isFrontendRequest(req)) {
+        return denyAbac(res, "Accepted evidence must be viewed through the audit dashboard.");
+    }
     const accepted = evidenceItems.filter(r =>
         r.status === "ACCEPTED" &&
-        (!r.region || req.user.region === r.region)
-    );
+        (!r.region || req.user.region === r.region) &&
+        hasSufficientClearance(req.user.clearanceLevel, r.sensitivity)
+    ).map(enrichEvidence);
 
     res.json(accepted);
 });
@@ -384,13 +1200,13 @@ app.get('/api/verified/report', verifyToken, requireApiAudience, requireActiveTo
         r.status === "VALIDATED" &&
         req.user.region === r.region &&
         hasSufficientClearance(req.user.clearanceLevel, r.sensitivity)
-    );
+    ).map(enrichEvidence);
 
     res.json(validated);
 });
 
 // View SUBMITTED Evidence
-app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['finance-manager','system-auditor']), (req, res) => {
+app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst', 'system-auditor']), (req, res) => {
     const roles = req.user.realm_access?.roles || [];
 
     // Machine/service path: automated validator
@@ -399,25 +1215,21 @@ app.get('/api/pending/report', verifyToken, requireApiAudience, requireActiveTok
             return denyAbac(res, "System-auditor access must come from the automated audit verifier service.");
         }
 
-        const submitted = evidenceItems.filter(r => r.status === "SUBMITTED");
+        const submitted = evidenceItems.filter(r => r.status === "SUBMITTED").map(enrichEvidence);
         return res.json(submitted);
     }
 
-    // Human path: finance manager
-    if (roles.includes('finance-manager')) {
-        if (req.user.department !== "finance") {
-            return denyAbac(res, "Only authorized GRC Lab team members can view submitted audit evidence.");
-        }
-
+    // Human path: analyst
+    if (roles.includes('analyst')) {
         if (!isFrontendRequest(req)) {
-            return denyAbac(res, "Manager submitted evidence access must come from the audit dashboard.");
+            return denyAbac(res, "Analyst submitted evidence access must come from the audit dashboard.");
         }
 
         const submitted = evidenceItems.filter(r =>
             r.status === "SUBMITTED" &&
             req.user.region === r.region &&
             hasSufficientClearance(req.user.clearanceLevel, r.sensitivity)
-        );
+        ).map(enrichEvidence);
 
         return res.json(submitted);
     }
@@ -439,7 +1251,7 @@ app.get('/api/all/report', verifyToken, requireApiAudience, requireActiveToken, 
         return denyAbac(res, "All-evidence access must come from the audit dashboard.");
     }
 
-    const scopedEvidence = evidenceItems.filter(r => req.user.region === r.region);
+    const scopedEvidence = evidenceItems.filter(r => req.user.region === r.region).map(enrichEvidence);
     res.json(scopedEvidence);
 });
 
@@ -453,6 +1265,13 @@ app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requ
 
     const evidence = evidenceItems[evidenceIndex];
     const requestSource = getRequestSource(req);
+
+    if (evidence.author === req.user.preferred_username) {
+        return denyAbac(res, "A manager cannot accept evidence they authored.");
+    }
+    if (evidence.validated_by === req.user.preferred_username) {
+        return denyAbac(res, "A user cannot validate and accept the same evidence.");
+    }
 
     // Resource attribute check: only VALIDATED evidence can be accepted
     if (evidence.status !== "VALIDATED") {
@@ -499,9 +1318,12 @@ app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requ
     evidence.status = "ACCEPTED";
     evidence.accepted_by = req.user.preferred_username;
     evidence.accepted_date = new Date().toISOString();
+    const evidenceRequestClosed = closeEvidenceRequestIfComplete(evidence.evidence_request_id);
 
     res.json({
         message: `Evidence ${req.params.reportID} successfully ACCEPTED by ${req.user.preferred_username}.`,
+        evidence: enrichEvidence(evidence),
+        evidenceRequestClosed: evidenceRequestClosed,
         abacDecision: "Allowed by hybrid RBAC + ABAC policy",
         checkedAttributes: {
             department: req.user.department,
@@ -538,15 +1360,67 @@ app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requi
     }
 
     evidence.status = "VALIDATED";
+    evidence.validated_by = req.user.preferred_username || "report-verifier-client";
+    evidence.validated_date = new Date().toISOString();
+    evidence.review_note = "Validated by automated controls check.";
+    markAuditItemInReview(evidence.audit_item_id);
 
     res.json({
         message: `Evidence ${req.params.reportID} successfully VALIDATED by automated controls check.`,
+        evidence: enrichEvidence(evidence),
         abacDecision: "Allowed by hybrid RBAC + ABAC policy",
         checkedAttributes: {
             requestSource: requestSource,
             evidenceStatusBeforeValidation: "SUBMITTED",
             evidenceSensitivity: evidence.sensitivity,
             evidenceRegion: evidence.region
+        }
+    });
+});
+
+// Analyst Validation Endpoint (Status SUBMITTED -> VALIDATED)
+app.patch('/api/analyst/validate/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['analyst']), (req, res) => {
+    const evidenceIndex = evidenceItems.findIndex(r => r.id === req.params.reportID);
+    if (evidenceIndex === -1) return res.status(404).json({ error: "Evidence not found." });
+
+    const evidence = evidenceItems[evidenceIndex];
+    const requestSource = getRequestSource(req);
+
+    if (evidence.author === req.user.preferred_username) {
+        return denyAbac(res, "An evidence author cannot validate their own evidence.");
+    }
+    if (evidence.status !== "SUBMITTED") {
+        return denyAbac(res, "Only SUBMITTED evidence can be validated by an analyst.");
+    }
+    if (!isFrontendRequest(req)) {
+        return denyAbac(res, "Analyst validation must come from the audit dashboard.");
+    }
+    if (req.user.region !== evidence.region) {
+        return denyAbac(res, "Analyst region does not match the evidence region.");
+    }
+    if (!hasSufficientClearance(req.user.clearanceLevel, evidence.sensitivity)) {
+        return denyAbac(res, "Analyst clearance level is not sufficient for this evidence sensitivity.");
+    }
+
+    const reviewNote = typeof req.body?.review_note === "string" ? req.body.review_note.trim() : "";
+
+    evidence.status = "VALIDATED";
+    evidence.validated_by = req.user.preferred_username;
+    evidence.validated_date = new Date().toISOString();
+    evidence.review_note = reviewNote;
+    markAuditItemInReview(evidence.audit_item_id);
+
+    res.json({
+        message: `Evidence ${req.params.reportID} successfully VALIDATED by ${req.user.preferred_username}.`,
+        evidence: enrichEvidence(evidence),
+        abacDecision: "Allowed by hybrid RBAC + ABAC policy",
+        checkedAttributes: {
+            clearanceLevel: req.user.clearanceLevel,
+            userRegion: req.user.region,
+            evidenceSensitivity: evidence.sensitivity,
+            evidenceRegion: evidence.region,
+            requestSource: requestSource,
+            evidenceStatusBeforeValidation: "SUBMITTED"
         }
     });
 });
