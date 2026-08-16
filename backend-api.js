@@ -445,7 +445,7 @@ function requireApiAudience(req, res, next) {
 
 
 // --- Token Introspection for High-Risk Endpoints ---
-const KEYCLOAK_INTROSPECTION_URL = "http://192.168.30.10:8080/realms/cyber-audit-portal/protocol/openid-connect/token/introspect";
+const KEYCLOAK_INTROSPECTION_URL = "http://192.168.40.10:8080/realms/cyber-audit-portal/protocol/openid-connect/token/introspect";
 const INTROSPECTION_CLIENT_ID = "audit-validator-client";
 
 async function introspectAccessToken(token) {
@@ -498,9 +498,9 @@ async function requireActiveToken(req, res, next) {
 
 
 // --- Simple Risk-Based Access Control for Acceptance Endpoint ---
-const KEYCLOAK_ADMIN_TOKEN_URL = "http://192.168.30.10:8080/realms/master/protocol/openid-connect/token";
-const KEYCLOAK_ADMIN_USERS_URL = "http://192.168.30.10:8080/admin/realms/cyber-audit-portal/users";
-const KEYCLOAK_EVENTS_URL = "http://192.168.30.10:8080/admin/realms/cyber-audit-portal/events";
+const KEYCLOAK_ADMIN_TOKEN_URL = "http://192.168.40.10:8080/realms/master/protocol/openid-connect/token";
+const KEYCLOAK_ADMIN_USERS_URL = "http://192.168.40.10:8080/admin/realms/cyber-audit-portal/users";
+const KEYCLOAK_EVENTS_URL = "http://192.168.40.10:8080/admin/realms/cyber-audit-portal/events";
 const RISK_DENY_THRESHOLD = 70;
 const RISK_EVENT_WINDOW_MS = 10 * 60 * 1000; // last 10 minutes
 
