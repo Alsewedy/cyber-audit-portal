@@ -47,7 +47,7 @@
         import Keycloak from 'keycloak-js';
 
         // 1. Fetch Public Data Immediately (No auth required)
-        fetch('http://localhost:3050/api/public')
+        fetch('/api/public')
             .then(res => res.json())
             .then(data => {
                 document.getElementById('publicData').innerText = JSON.stringify(data, null, 2);
