@@ -4,6 +4,7 @@ const cors = require('cors');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
 
 const app = express();
 app.use(cors());
@@ -1342,16 +1343,17 @@ app.patch('/api/approve/report/:reportID', verifyToken, requireApiAudience, requ
 });
 
 // Script Validation Endpoint (Status SUBMITTED -> VALIDATED)
-app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['automated-validator']), (req, res) => {
-    const evidenceIndex = evidenceItems.findIndex(r => r.id === req.params.reportID);
-    if (evidenceIndex === -1) return res.status(404).json({ error: "Evidence not found." });
+app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requireActiveToken, requireAnyRole(['automated-validator']), async (req, res) => {
+    const evidence = evidenceItems.find(item => item.id === req.params.reportID);
+    if (!evidence) {
+        return res.status(404).json({ error: "Evidence not found." });
+    }
 
-    const evidence = evidenceItems[evidenceIndex];
     const requestSource = getRequestSource(req);
 
     // Environment attribute check: validation must come from the automated service client
     if (!isVerifierServiceRequest(req)) {
-        return denyAbac(res, "Validation must come from the automated audit verifier service.");
+        return denyAbac(res, "Validation must come from the automated audit validator service.");
     }
 
     // Resource attribute check: only SUBMITTED evidence can be validated
@@ -1359,15 +1361,119 @@ app.patch('/api/system/verify/:reportID', verifyToken, requireApiAudience, requi
         return denyAbac(res, "Only SUBMITTED evidence can be validated by the automated service.");
     }
 
+    const attemptedDate = new Date().toISOString();
+    const storedFilename = path.basename(evidence.filename || "");
+    const evidencePath = path.resolve(uploadDir, storedFilename);
+    const uploadsRoot = path.resolve(uploadDir) + path.sep;
+
+    evidence.validation_attempted_date = attemptedDate;
+
+    if (
+        !storedFilename ||
+        storedFilename !== evidence.filename ||
+        !evidencePath.startsWith(uploadsRoot)
+    ) {
+        evidence.validation_output = "";
+        evidence.validation_error = "Invalid stored evidence filename.";
+        evidence.validation_exit_status = null;
+        evidence.validation_signal = null;
+
+        return res.status(400).json({
+            error: "Invalid stored evidence filename.",
+            evidence: enrichEvidence(evidence)
+        });
+    }
+
+    if (path.extname(storedFilename).toLowerCase() !== ".sh") {
+        evidence.validation_output = "";
+        evidence.validation_error = "Automated Phase 1 validation supports only .sh files.";
+        evidence.validation_exit_status = null;
+        evidence.validation_signal = null;
+
+        return res.status(422).json({
+            error: evidence.validation_error,
+            evidence: enrichEvidence(evidence)
+        });
+    }
+
+    try {
+        const stats = await fs.promises.stat(evidencePath);
+        if (!stats.isFile()) {
+            throw new Error("Resolved evidence path is not a regular file.");
+        }
+    } catch (error) {
+        evidence.validation_output = "";
+        evidence.validation_error = error.message;
+        evidence.validation_exit_status = null;
+        evidence.validation_signal = null;
+
+        return res.status(404).json({
+            error: "Uploaded evidence file is unavailable.",
+            reason: error.message,
+            evidence: enrichEvidence(evidence)
+        });
+    }
+
+    const execution = await new Promise(resolve => {
+        execFile(
+            "/bin/sh",
+            [evidencePath],
+            {
+                cwd: uploadDir,
+                timeout: 30_000,
+                maxBuffer: 1024 * 1024,
+                shell: false,
+                env: {
+                    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                }
+            },
+            (error, stdout, stderr) => {
+                resolve({ error, stdout, stderr });
+            }
+        );
+    });
+
+    const exitStatus = execution.error
+        ? execution.error.killed
+            ? 124
+            : Number.isInteger(execution.error.code)
+                ? execution.error.code
+                : 1
+        : 0;
+
+    evidence.validation_output = execution.stdout || "";
+    evidence.validation_error = execution.stderr || (execution.error ? execution.error.message : "");
+    evidence.validation_exit_status = exitStatus;
+    evidence.validation_signal = execution.error?.signal || null;
+
+    if (exitStatus !== 0) {
+        return res.status(422).json({
+            message: `Automated validation failed for evidence ${evidence.id}.`,
+            evidence: enrichEvidence(evidence),
+            execution: {
+                exitStatus: exitStatus,
+                signal: evidence.validation_signal,
+                stdout: evidence.validation_output,
+                stderr: evidence.validation_error
+            }
+        });
+    }
+
     evidence.status = "VALIDATED";
     evidence.validated_by = req.user.preferred_username || "audit-validator-client";
-    evidence.validated_date = new Date().toISOString();
-    evidence.review_note = "Validated by automated controls check.";
+    evidence.validated_date = attemptedDate;
+    evidence.review_note = "Validated by automated compliance script.";
     markAuditItemInReview(evidence.audit_item_id);
 
-    res.json({
-        message: `Evidence ${req.params.reportID} successfully VALIDATED by automated controls check.`,
+    return res.json({
+        message: `Evidence ${evidence.id} successfully VALIDATED by automated compliance script.`,
         evidence: enrichEvidence(evidence),
+        execution: {
+            exitStatus: exitStatus,
+            signal: null,
+            stdout: evidence.validation_output,
+            stderr: evidence.validation_error
+        },
         abacDecision: "Allowed by hybrid RBAC + ABAC policy",
         checkedAttributes: {
             requestSource: requestSource,
