@@ -42,8 +42,16 @@ pipeline {
             steps {
                 sshagent(credentials: ['web01-ssh-key']) {
                     sh '''
+                        ssh -o StrictHostKeyChecking=no $WEB01 \
+                          "mkdir -p $APP_DIR"
+
+                        scp -o StrictHostKeyChecking=no \
+                          docker-compose.yml \
+                          $WEB01:$APP_DIR/docker-compose.yml
+
                         ssh -o StrictHostKeyChecking=no $WEB01 "
                           cd $APP_DIR &&
+                          export IMAGE_TAG=$TAG &&
                           docker compose pull &&
                           docker compose up -d &&
                           docker image prune -f &&

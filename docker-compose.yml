@@ -1,6 +1,6 @@
 services:
   cyber-audit-backend:
-    image: cyber-audit-portal:baseline
+    image: ghcr.io/alsewedy/cyber-audit-portal:${IMAGE_TAG:-latest}
     container_name: cyber-audit-backend
     command: node backend-api.js
     ports:
@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
 
   cyber-audit-frontend:
-    image: cyber-audit-portal:baseline
+    image: ghcr.io/alsewedy/cyber-audit-portal:${IMAGE_TAG:-latest}
     container_name: cyber-audit-frontend
     command: node server.js
     ports:
