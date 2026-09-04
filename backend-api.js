@@ -7,6 +7,11 @@ const path = require('path');
 const { execFile } = require('child_process');
 
 const app = express();
+app.set("trust proxy", "172.16.10.10/32");
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} ${req.method} ${req.path} client_ip=${req.ip}`);
+    next();
+});
 app.use(cors());
 app.use(express.json());
 const PORT = 3050;
