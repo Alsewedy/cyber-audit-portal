@@ -9,6 +9,10 @@ services:
       - .env
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    logging:
+      driver: journald
+      options:
+        tag: "cyber-audit-backend"
     restart: unless-stopped
 
   cyber-audit-frontend:
